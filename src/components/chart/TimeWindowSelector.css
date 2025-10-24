@@ -1,0 +1,42 @@
+.time-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.button-group {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.selector-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selector-button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.selector-button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.selector-button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.selector-button:hover:not(.active) {
+  background: var(--bg-hover);
+}

@@ -1,0 +1,80 @@
+.prophet-selector {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-6);
+}
+
+.selector-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--spacing-6);
+}
+
+.prophet-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.prophet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.prophet-item:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border);
+}
+
+.prophet-item.active {
+  border-color: var(--prophet-color);
+  background: white;
+}
+
+.prophet-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--prophet-color);
+  flex-shrink: 0;
+}
+
+.prophet-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.prophet-item.active .prophet-name {
+  color: var(--prophet-color);
+}
+
+.expand-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.prophet-item:hover .expand-icon {
+  color: var(--text);
+  transform: translateX(2px);
+}
+
+.prophet-item.active .expand-icon {
+  color: var(--prophet-color);
+}

@@ -1,0 +1,97 @@
+// Base price data structure from JSON
+export interface BasePriceData {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+// Price data with added ticker in runtime
+export interface PriceData extends BasePriceData {
+  ticker: string;
+  // Optional prophet predictions
+  timeSage?: number;
+  trendOracle?: number;
+  marketMind?: number;
+  quantumPredictor?: number;
+}
+
+import { BasePriceData } from './price';
+
+// Raw asset data from JSON file
+export type AssetMetadata = {
+  ticker: string;
+  name: string;
+  market?: string;
+};
+
+export type RawAssetData = {
+  metadata: AssetMetadata;
+  prices: Array<BasePriceData>;
+};
+
+export type RawPricesData = Record<string, RawAssetData>;
+
+// Runtime asset types
+export type AssetMeta = {
+  ticker: string;
+  name: string;
+  market?: string;
+  lastPrice?: number | null;
+  priceChange?: number;
+};
+
+export type AssetSearchResult = {
+  ticker: string;
+  name: string;
+  market?: string;
+  lastPrice?: number;
+  type?: 'Asset';
+};
+
+// DynamoDB Table Names
+export const TABLES = {
+  ASSETS: 'ChasingProphets-Assets',
+  ASSET_PRICES: 'ChasingProphets-AssetPrices',
+  NOTIFICATIONS: 'ChasingProphets-Notifications'
+} as const;
+
+// Shape of the generated prices JSON file
+export type GeneratedPrices = Record<string, GeneratedPriceData>;
+  metadata: {
+    ticker: string;
+    name: string;
+    market?: string;
+  };
+  prices: PriceData[];
+}
+
+// UI-ready asset metadata with computed fields
+export interface AssetMeta {
+  ticker: string;
+  name: string;
+  market?: string;
+  lastPrice?: number | null;
+  priceChange?: number;
+}
+
+// Asset search result
+export interface AssetSearchResult {
+  ticker: string;
+  name: string;
+  market?: string;
+  lastPrice?: number;
+  type?: 'Asset';
+}
+
+// DynamoDB table names (used consistently across services)
+export const TABLES = {
+  ASSETS: 'ChasingProphets-Assets',
+  ASSET_PRICES: 'ChasingProphets-AssetPrices',
+  NOTIFICATIONS: 'ChasingProphets-Notifications'
+} as const;
+
+// Generated prices JSON shape (from data/generatedPrices.json)
+export type GeneratedPrices = Record<string, GeneratedPriceData>;

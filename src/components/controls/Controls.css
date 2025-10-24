@@ -1,0 +1,40 @@
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-2);
+}
+
+.control-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 100px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.control-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: white;
+  border: 1px solid var(--border);
+  transition: all var(--transition-fast);
+}
+
+.control-button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.control-button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}

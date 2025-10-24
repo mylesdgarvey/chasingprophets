@@ -1,0 +1,209 @@
+/* Prophet Accordion */
+.prophet-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.prophet-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.prophet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4);
+  cursor: pointer;
+  user-select: none;
+}
+
+.prophet-header:hover {
+  background: var(--hover-color);
+}
+
+.prophet-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.prophet-content {
+  border-top: 1px solid var(--border-color);
+  padding: var(--spacing-4);
+  background: var(--background-color);
+}
+
+/* Prophet Controls */
+.prophet-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.control-group {
+  display: flex;
+  gap: var(--spacing-4);
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.control-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.control-input {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  background: white;
+  transition: all var(--transition-fast);
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(0, 119, 255, 0.1);
+}
+
+/* Prophet Selector */
+.prophet-selector {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.prophet-option {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.prophet-option:not(.active) {
+  background: white;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.prophet-option:not(.active):hover {
+  background: var(--hover-color);
+}
+
+.prophet-option.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Chart Styles */
+.chart-container {
+  padding: var(--spacing-4);
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.chart-controls {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: center;
+}
+
+.chart-legend {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-4);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Time Window Selector */
+.time-window-selector {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.time-window-option {
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: 6px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.time-window-option:not(.active) {
+  color: var(--text-secondary);
+}
+
+.time-window-option:not(.active):hover {
+  background: var(--hover-color);
+  color: var(--text-primary);
+}
+
+.time-window-option.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Scale Type Selector */
+.scale-type-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1);
+  background: var(--hover-color);
+  border-radius: 6px;
+}
+
+.scale-type-option {
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.scale-type-option:not(.active) {
+  color: var(--text-secondary);
+}
+
+.scale-type-option.active {
+  background: white;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
