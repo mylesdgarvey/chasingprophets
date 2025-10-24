@@ -1,0 +1,13 @@
+I am looking to design and develop out a finance prediction application platform.  The platform will allow users to look up "Assets", "Prophets", and "Forecasts", each under its own tab.  
+
+The back end data model I am still having a tough time designing out.  I think for my platform, Iw ant to keep this as nosql.  however, i have multiple "Data tables", each unique to the specific asset itself.  
+
+these tables will update everyday, such as each asset's OHLCV data, as well as its derived data that is the OO,  CC, HH, and LL percentage data.   
+
+I'm personally used to old school data modeling, so im going to need help implementing out the nosql solution.  im operating within the amazon environment.  In an ideal world, the way my app would work is:
+
+At 4:30pm EST every day a script is ran (im assuming via Amazon Lambda).  The python script will go through each asset in the assets table, pull the most up to date daily OHLCV ata point, compute the new oo, hh, ll, and cc 
+percentage return data, append these tables, for each prophet load the model, prepare the input, pass it into the model to get an inference, and update the prophet's running inference table (each individual prophet will have 
+their own managed running inference list).  The performance of all prophets for all assets are updated and teh main prophet and forecast performance tables are updated.
+
+
