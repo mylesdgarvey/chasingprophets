@@ -182,6 +182,34 @@ export default function AssetPage() {
     };
   }, [candlestickData, returnData, ticker]);
 
+  // Ensure Plotly charts resize when their container size changes (e.g. sidebar toggles)
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const ro = new ResizeObserver(() => {
+      try {
+        if (candlestickChartRef.current) {
+          // safe no-op if not a plotly element
+          // @ts-ignore
+          Plotly.Plots && Plotly.Plots.resize && Plotly.Plots.resize(candlestickChartRef.current);
+        }
+        if (returnsChartRef.current) {
+          // @ts-ignore
+          Plotly.Plots && Plotly.Plots.resize && Plotly.Plots.resize(returnsChartRef.current);
+        }
+      } catch (e) {
+        // swallow resize errors
+      }
+    });
+
+    const c = candlestickChartRef.current;
+    const r = returnsChartRef.current;
+    if (c) ro.observe(c);
+    if (r) ro.observe(r);
+
+    return () => ro.disconnect();
+  }, []);
+
   if (error) {
     return <div className="error-message">{error}</div>;
   }
@@ -193,7 +221,12 @@ export default function AssetPage() {
   return (
     <div className="asset-page">
       <header className="page-header">
-        <h1 className="title">{asset?.ticker || asset?.name}</h1>
+        <div className="title-block">
+          <h1 className="title">{asset?.ticker || asset?.name}</h1>
+          {asset?.name && asset?.name !== asset?.ticker ? (
+            <div className="subtitle">{asset?.name}</div>
+          ) : null}
+        </div>
         <div className="controls">
           {/* Placeholder for TimeWindow/Scale controls if needed in future */}
         </div>
@@ -227,20 +260,36 @@ export default function AssetPage() {
         .asset-page {
           display: flex;
           flex-direction: column;
-          padding: var(--spacing-6);
+          /* reduce top padding so the page header sits closer to the top */
+          padding: var(--spacing-4) 0;
           width: 100%;
           max-width: 100%;
           gap: var(--spacing-6);
+          /* page background: white per user preference */
+          background: #ffffff;
         }
         .page-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: var(--spacing-6);
+          /* slightly reduced top padding so the header isn't too far from the top of the page */
+          padding: 20px 32px 8px 32px; /* top right bottom left */
           background: var(--bg-primary);
           border-radius: var(--radius-lg);
           box-shadow: var(--shadow-sm);
-          margin-bottom: var(--spacing-4);
+          margin-bottom: 0; /* control separation via grid margin */
+        }
+        .title-block {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .subtitle {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin: 0;
+          line-height: 1.2;
+          font-weight: 500;
         }
         .title {
           font-size: 28px;
@@ -250,25 +299,57 @@ export default function AssetPage() {
         }
         .cards-grid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: var(--spacing-8);
-          padding: var(--spacing-6);
-          max-width: 1400px;
-          margin: 0 auto;
+          /* Stable 2-column layout: columns are equal fractions of the available width
+             so when the sidebar collapses the columns expand, and when it expands they compress. */
+          grid-template-columns: repeat(2, 1fr);
+          column-gap: 48px; /* bigger horizontal gap to clearly separate cards */
+          row-gap: 36px;
+          width: 100%;
+          margin: 8px 0 0 0; /* comfortable small gap between header and cards (~20px total with header padding) */
+          padding: 0 32px; /* ensure padding around grid so cards don't touch edges */
+          box-sizing: border-box;
+          background: transparent;
+          align-items: start;
+          align-content: start;
+          /* create a new stacking context so lifted/z-indexed children don't overlap neighbors */
+          isolation: isolate;
+          grid-auto-rows: auto;
+        }
+
+        /* Mobile: single column */
+        @media (max-width: 767px) {
+          .cards-grid {
+            grid-template-columns: 1fr;
+            width: 100%;
+            margin: 16px 0 0 0;
+            padding: 0 16px;
+          }
         }
         .chart-card {
           position: relative;
-          background: var(--bg-primary);
-          border-radius: var(--radius-lg);
-          padding: var(--spacing-8);
-          box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px, rgba(0, 0, 0, 0.05) 0px 8px 24px;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          height: 360px;
+          /* cards: slightly darker grey (not too dark) to increase contrast */
+          background: #f3f4f6; /* light grey */
+          border: 1px solid rgba(15,23,42,0.08);
+          border-radius: 12px;
+          padding: 20px;
+          /* stronger, always-visible shadow to delineate cards */
+          box-shadow: var(--shadow-xl);
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          /* Use min-height so cards can grow/shrink with layout; width drives layout */
+          min-height: 280px;
           width: 100%;
+          display: flex;
+          flex-direction: column;
+          z-index: 0;
+          overflow: hidden;
+          /* allow the card to shrink inside grid cells */
+          min-width: 0;
+          box-sizing: border-box;
         }
         .chart-card:hover {
-          transform: translateY(-2px);
-          box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px, rgba(0, 0, 0, 0.1) 0px 12px 32px;
+          transform: translateY(-6px);
+          box-shadow: var(--shadow-xl);
+          z-index: 20; /* lift hovered card above neighbors */
         }
         .chart-card:after {
           content: '';
@@ -281,8 +362,22 @@ export default function AssetPage() {
           border-radius: 2px;
         }
         .chart-area {
-          height: 100%;
           width: 100%;
+          /* let the chart area size naturally, but reserve a reasonable minimum */
+          min-height: 260px; /* main chart area; timeline can sit below */
+          height: auto;
+          /* Prevent Plotly or other children from forcing intrinsic width beyond the card */
+          min-width: 0;
+          max-width: 100%;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+        /* Force direct Plotly root containers to respect the chart-area bounds */
+        .chart-area > div {
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box;
+          overflow: hidden;
         }
         .placeholder-card {
           display: flex;

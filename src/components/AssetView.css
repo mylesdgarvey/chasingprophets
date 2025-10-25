@@ -1,0 +1,291 @@
+.asset-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  /* Ensure container spans full width */
+  flex: 1;
+}
+
+.asset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 32px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  /* Ensure header takes full width */
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title-section h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ticker {
+  font-size: 18px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.description {
+  margin: 8px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.price-section {
+  text-align: right;
+}
+
+.current-price {
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.price-change {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.price-change.positive {
+  color: var(--success);
+}
+
+.price-change.negative {
+  color: var(--error);
+}
+
+.market-metrics {
+  display: grid;
+  /* Fixed 4-column layout on wide screens but allow natural resizing when container shrinks.
+     Use fractions so widths scale with container (sidebar collapse/expand). */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  /* Ensure grid spans full width of parent */
+  flex: 1;
+  align-items: stretch;
+  align-content: start;
+  grid-auto-rows: auto;
+}
+
+.metric-card {
+  /* light blue background for metric cards to match main cards */
+  background: #eef6ff;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(14,82,167,0.06);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Ensure cards fill their grid cells but allow natural height */
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  align-self: stretch;
+  min-height: 120px;
+  /* create stacking context to avoid rendering overlap artifacts */
+  isolation: isolate;
+  will-change: transform;
+  /* allow the card to shrink inside grid cells (prevents overflow causing intersections) */
+  min-width: 0;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  /* Prevent long labels from breaking layout */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  /* Ensure values don't wrap */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Additional styles for metric card content */
+.metric-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Take remaining space in card */
+  flex: 1;
+}
+
+.metric-secondary {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.chart-section {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--box-shadow);
+  min-height: 400px;
+}
+
+.market-analysis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.analysis-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--box-shadow);
+}
+
+.analysis-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.indicator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.indicator-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.indicator-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.indicator-value.positive {
+  color: var(--success);
+}
+
+.indicator-value.negative {
+  color: var(--error);
+}
+
+.loading-state,
+.error-state,
+.not-found-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.error-state {
+  color: var(--error);
+}
+
+/* Maintain 4 columns on larger screens */
+@media (min-width: 1200px) {
+  .market-metrics {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+  }
+}
+
+/* Switch to 2x2 grid on medium screens */
+@media (max-width: 1199px) and (min-width: 768px) {
+  .market-metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  
+  .metric-card {
+    /* Increase height for better visual balance in 2x2 */
+    min-height: 160px;
+  }
+}
+
+/* Stack on mobile but maintain proper spacing */
+@media (max-width: 767px) {
+  .asset-view {
+    padding: 16px;
+  }
+
+  .asset-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .price-section {
+    text-align: left;
+    width: 100%;
+  }
+
+  .market-metrics {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .metric-card {
+    padding: 20px;
+    min-height: auto;
+  }
+
+  .current-price {
+    font-size: 28px;
+  }
+
+  .price-change {
+    font-size: 16px;
+  }
+}

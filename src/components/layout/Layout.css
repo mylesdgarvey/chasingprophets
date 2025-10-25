@@ -11,13 +11,37 @@
 .layout {
   font-family: var(--font-family);
   letter-spacing: -0.01em;
-}
-
-/* Base Layout */
-.layout {
   display: flex;
   min-height: 100vh;
+  width: 100%;
   background-color: var(--bg-secondary);
+}
+
+.main-container {
+  margin-left: var(--sidebar-width-expanded);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: calc(100vw - var(--sidebar-width-expanded));
+  max-width: calc(100vw - var(--sidebar-width-expanded));
+  overflow-x: hidden;
+}
+
+.main-content {
+  padding: 24px 32px;
+  padding-top: calc(var(--header-height) + 24px);
+  background-color: var(--bg-secondary);
+  box-sizing: border-box;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed + .main-content {
+  margin-left: var(--sidebar-width-collapsed);
+  width: calc(100% - var(--sidebar-width-collapsed));
 }
 
 /* Sidebar */
