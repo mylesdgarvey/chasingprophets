@@ -27,7 +27,6 @@ export default function AssetPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<string>('1Y');
-  const [techAnalysis, setTechAnalysis] = useState<Record<string, number | null>>({});
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   // Downsample daily prices into weekly OHLCV (week start = Monday)
@@ -245,86 +244,66 @@ export default function AssetPage() {
     return out;
   }
 
+  function computeRangeStart(range: string, reference: Date): string | null {
+    if (!range) return null;
+    const d = new Date(reference);
+    switch (range) {
+      case '30D': d.setDate(d.getDate() - 30); break;
+      case '1M': d.setMonth(d.getMonth() - 1); break;
+      case '3M': d.setMonth(d.getMonth() - 3); break;
+      case '6M': d.setMonth(d.getMonth() - 6); break;
+      case '1Y': d.setFullYear(d.getFullYear() - 1); break;
+      case 'YTD': d.setMonth(0, 1); break;
+      case '5Y': d.setFullYear(d.getFullYear() - 5); break;
+      case '10Y': d.setFullYear(d.getFullYear() - 10); break;
+      default: return null;
+    }
+    return d.toISOString().slice(0, 10);
+  }
+
   useEffect(() => {
-    async function loadAssetData() {
-      if (!ticker) return;
+    if (!ticker) return;
 
-      // compute date range based on selectedRange
-      const today = new Date();
-      const endDate = today.toISOString().slice(0, 10);
-      const computeStart = (range: string) => {
-        const d = new Date();
-        switch (range) {
-          case '30D': d.setDate(d.getDate() - 30); break;
-          case '1M': d.setMonth(d.getMonth() - 1); break;
-          case '3M': d.setMonth(d.getMonth() - 3); break;
-          case '6M': d.setMonth(d.getMonth() - 6); break;
-          case '1Y': d.setFullYear(d.getFullYear() - 1); break;
-          case 'YTD': d.setMonth(0, 1); break;
-          case '5Y': d.setFullYear(d.getFullYear() - 5); break;
-          case '10Y': d.setFullYear(d.getFullYear() - 10); break;
-          default: d.setFullYear(d.getFullYear() - 1);
-        }
-        return d.toISOString().slice(0, 10);
-      };
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+    setAsset(null);
+    setPrices([]);
+    setFullPrices([]);
 
-      const startDate = computeStart(selectedRange);
-
+    (async () => {
       try {
-        const [assetData, priceData] = await Promise.all([
+        const [assetData, history] = await Promise.all([
           getAsset(ticker),
-          getAssetPrices(ticker, startDate, endDate)
+          getAssetPrices(ticker)
         ]);
 
-        // If the metadata API doesn't return an asset but prices exist, fall back to
-        // constructing minimal metadata so the user still sees the price chart.
-        if (!assetData && priceData && priceData.length) {
+        if (!isMounted) return;
+
+        if (!assetData && history && history.length) {
           setAsset({ ticker: ticker || '', name: ticker });
         } else if (assetData) {
-          // normalize metadata shape
           setAsset({
             ticker: assetData.ticker || ticker,
             name: assetData.name || ticker,
             market: assetData.market
           });
         } else {
-          // Neither metadata nor price data found
           setError('Asset not found');
         }
 
-        // If the selected range is long (5Y/10Y), downsample daily -> weekly to keep memory low
-        let finalPrices = priceData || [];
-        if (selectedRange === '5Y' || selectedRange === '10Y') {
-          finalPrices = downsampleToWeekly(finalPrices);
-        }
-        setPrices(finalPrices);
+        const today = new Date();
+        const sanitized = (history || [])
+          .filter(price => new Date(price.date) <= today)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        setFullPrices(sanitized);
         setLoading(false);
       } catch (err: any) {
+        if (!isMounted) return;
+        console.error('Failed to load asset data', err);
         setError(err?.message || 'Failed to load asset data');
         setLoading(false);
-      }
-    }
-
-    loadAssetData();
-  }, [ticker, selectedRange]);
-
-  useEffect(() => {
-    if (!ticker) return;
-
-    setFullPrices([]);
-
-    let isMounted = true;
-
-    (async () => {
-      try {
-        const history = await getAssetPrices(ticker);
-        if (isMounted) {
-          const today = new Date();
-          const sanitized = (history || []).filter(price => new Date(price.date) <= today);
-          setFullPrices(sanitized);
-        }
-      } catch (err) {
-        console.warn('Failed to load full price history for Time Explorer', err);
       }
     })();
 
@@ -333,31 +312,83 @@ export default function AssetPage() {
     };
   }, [ticker]);
 
+  useEffect(() => {
+    if (!fullPrices.length) {
+      setPrices([]);
+      return;
+    }
+
+    const reference = new Date(fullPrices[fullPrices.length - 1].date);
+    const start = computeRangeStart(selectedRange, reference);
+    if (!start) {
+      setPrices([...fullPrices]);
+      return;
+    }
+
+    const filtered = fullPrices.filter(price => price.date >= start);
+    setPrices(filtered);
+  }, [fullPrices, selectedRange]);
+
+  const indicatorSeries = useMemo(() => {
+    if (!fullPrices.length) return null;
+    const closes = fullPrices.map(p => p.close);
+    return {
+      sma20: smaSeries(closes, 20),
+      sma50: smaSeries(closes, 50),
+      sma200: smaSeries(closes, 200),
+      rsi14: rsiSeries(closes, 14),
+      macdHist: macdSeries(closes)
+    };
+  }, [fullPrices]);
+
+  const priceIndexByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    fullPrices.forEach((price, idx) => {
+      map.set(price.date, idx);
+    });
+    return map;
+  }, [fullPrices]);
+
+  const rangeIndicators = useMemo(() => {
+    if (!indicatorSeries || !prices.length) return null;
+    const sliceSeries = (series: Array<number | null>) => (
+      prices.map(price => {
+        const idx = priceIndexByDate.get(price.date);
+        if (idx === undefined) return null;
+        return series[idx] ?? null;
+      })
+    );
+
+    return {
+      sma20: sliceSeries(indicatorSeries.sma20),
+      sma50: sliceSeries(indicatorSeries.sma50),
+      sma200: sliceSeries(indicatorSeries.sma200),
+      rsi14: sliceSeries(indicatorSeries.rsi14),
+      macdHist: sliceSeries(indicatorSeries.macdHist)
+    };
+  }, [indicatorSeries, prices, priceIndexByDate]);
+
+  const candlestickSource = useMemo(() => {
+    if (!prices.length) return [] as PriceData[];
+    if (selectedRange === '5Y' || selectedRange === '10Y') {
+      return downsampleToWeekly(prices);
+    }
+    return prices;
+  }, [prices, selectedRange]);
+
   const candlestickData = useMemo(() => {
-    if (!prices.length) return null;
+    if (!candlestickSource.length) return null;
 
     return [{
-      x: prices.map(p => p.date),
-      open: prices.map(p => p.open),
-      high: prices.map(p => p.high),
-      low: prices.map(p => p.low),
-      close: prices.map(p => p.close),
+      x: candlestickSource.map(p => p.date),
+      open: candlestickSource.map(p => p.open),
+      high: candlestickSource.map(p => p.high),
+      low: candlestickSource.map(p => p.low),
+      close: candlestickSource.map(p => p.close),
       type: 'candlestick' as const,
       name: ticker
     }];
-  }, [prices, ticker]);
-
-  // derive technical indicators from current prices
-  useEffect(() => {
-    if (!prices || !prices.length) {
-      setTechAnalysis({});
-      return;
-    }
-    const closes = prices.map(p => p.close);
-    const sma50 = simpleSMA(closes, 50);
-    const sma200 = simpleSMA(closes, 200);
-    setTechAnalysis({ sma50, sma200 });
-  }, [prices]);
+  }, [candlestickSource, ticker]);
 
   // Calculate returns for multiple time windows
   function calculateReturnsSeries(priceData: PriceData[], period: number, priceField: 'open' | 'close' | 'high' | 'low') {
@@ -644,56 +675,60 @@ export default function AssetPage() {
             <button onClick={() => setExpandedCard('technical')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
           </div>
           <div className="placeholder-content">
-            {prices && prices.length ? (
+            {prices && prices.length && rangeIndicators ? (
               <div className="mini-indicators">
-                {/* compute indicators from current prices */}
                 {(() => {
-                  const closes = prices.map(p => p.close);
-                  const highs = prices.map(p => p.high);
-                  const lows = prices.map(p => p.low);
-                  const volumes = prices.map(p => p.volume || 0);
-
-                  // Industry-standard indicators: SMA(20, 50, 200), RSI(14), MACD(hist)
-                  // Adapt SMA(200) if data is shorter; fall back to SMA(50) or less
-                  const N = closes.length;
-                  const sma200Period = N >= 200 ? 200 : (N >= 100 ? 50 : Math.max(20, Math.floor(N / 3)));
-                  
-                  const sma20Series = smaSeries(closes, 20);
-                  const sma50Series = smaSeries(closes, 50);
-                  const sma200Series = smaSeries(closes, sma200Period);
-                  
-                  // Get last values for display in the combined SMA component
                   const getLastValue = (series: Array<number | null>) => {
                     for (let i = series.length - 1; i >= 0; i--) {
-                      if (series[i] !== null && series[i] !== undefined && !Number.isNaN(series[i] as number)) {
-                        return series[i] as number;
+                      const val = series[i];
+                      if (val !== null && val !== undefined && !Number.isNaN(val as number)) {
+                        return val as number;
                       }
                     }
                     return null;
                   };
-                  
-                  const indicators = [
-                    { key: 'SMA_Combined', name: 'SMA Combined', type: 'combined', sma20: sma20Series, sma50: sma50Series, sma200: sma200Series, currentValue: closes[closes.length - 1] },
-                    { key: 'RSI14', name: 'RSI(14)', type: 'indicator', series: rsiSeries(closes, 14), thresholds: { low: 30, high: 70 } },
-                    { key: 'MACD', name: 'MACD(hist)', type: 'indicator', series: macdSeries(closes), histogram: true }
-                  ];
 
-                  return indicators.map(ind => {
-                    if (ind.type === 'combined') {
-                      return (
-                        <div key={ind.key} style={{ marginBottom: 12 }}>
-                          <SMACombined sma20={ind.sma20 || []} sma50={ind.sma50 || []} sma200={ind.sma200 || []} currentValue={ind.currentValue} />
-                        </div>
-                      );
-                    }
-                    const s = (ind as any).series || [];
-                    const last = (s.slice().reverse().find((v: any) => v !== null && v !== undefined) as number | null) ?? null;
-                    return (
-                      <div key={ind.key} style={{ marginBottom: 12 }}>
-                        <MiniIndicator name={ind.name} value={last ?? null} series={s} thresholds={(ind as any).thresholds as any} histogram={(ind as any).histogram as any} />
+                  const sma20Series = rangeIndicators.sma20 || [];
+                  const sma50Series = rangeIndicators.sma50 || [];
+                  const sma200Series = rangeIndicators.sma200 || [];
+                  const rsiSeriesData = rangeIndicators.rsi14 || [];
+                  const macdHistSeries = rangeIndicators.macdHist || [];
+                  const lastClose = prices[prices.length - 1]?.close ?? null;
+
+                  const macdExtent = (() => {
+                    const vals = macdHistSeries.filter((v): v is number => v !== null && v !== undefined && !Number.isNaN(v as number)).map(v => Math.abs(v));
+                    if (!vals.length) return 1;
+                    const maxAbs = Math.max(...vals);
+                    return maxAbs === 0 ? 1 : maxAbs;
+                  })();
+
+                  const macdDomain = { min: -macdExtent, max: macdExtent };
+
+                  return (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        <SMACombined sma20={sma20Series} sma50={sma50Series} sma200={sma200Series} currentValue={lastClose} />
                       </div>
-                    );
-                  });
+                      <div style={{ marginBottom: 12 }}>
+                        <MiniIndicator
+                          name="RSI(14)"
+                          value={getLastValue(rsiSeriesData)}
+                          series={rsiSeriesData}
+                          thresholds={{ low: 30, high: 70 }}
+                          yDomain={{ min: 0, max: 100 }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <MiniIndicator
+                          name="MACD(hist)"
+                          value={getLastValue(macdHistSeries)}
+                          series={macdHistSeries}
+                          histogram
+                          yDomain={macdDomain}
+                        />
+                      </div>
+                    </>
+                  );
                 })()}
               </div>
             ) : (

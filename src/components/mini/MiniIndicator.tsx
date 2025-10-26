@@ -9,33 +9,23 @@ interface Props {
   thresholds?: { low?: number; high?: number } | null;
   histogram?: boolean; // render histogram bars (for MACD)
   showScale?: boolean; // show Y-axis numbers and gridlines
+  yDomain?: { min: number; max: number } | null; // fixed Y bounds (e.g., 0-100 for RSI)
 }
 
-function toPath(data: Array<number | null>, w: number, h: number) {
-  // Normalize X positions to the count of valid points so long lookbacks (many nulls)
-  // don't squeeze the line to the right edge.
-  const vals = data.map(v => (v === null || v === undefined || Number.isNaN(v) ? NaN : (v as number)));
-  const clean: number[] = [];
-  for (let i = 0; i < vals.length; i++) {
-    const v = vals[i];
-    if (!Number.isNaN(v)) clean.push(v);
-  }
-  if (!clean.length) return '';
-  const min = Math.min(...clean);
-  const max = Math.max(...clean);
+function toPath(values: number[], w: number, h: number, min: number, max: number) {
+  if (!values.length) return '';
   const range = max - min || 1;
-  const validCount = clean.length;
-  const step = w / Math.max(1, validCount - 1);
-  // If there's only one valid point, draw a short horizontal line centered
-  if (validCount === 1) {
+  const count = values.length;
+  const step = w / Math.max(1, count - 1);
+  if (count === 1) {
     const x = w / 2;
-    const y = h - ((clean[0] - min) / range) * h;
+    const y = h - ((values[0] - min) / range) * h;
     const len = Math.min(6, w * 0.05);
     return `M ${Math.max(0, x - len)} ${y.toFixed(2)} L ${Math.min(w, x + len)} ${y.toFixed(2)}`;
   }
   let path = '';
-  for (let k = 0; k < validCount; k++) {
-    const v = clean[k];
+  for (let k = 0; k < count; k++) {
+    const v = values[k];
     const x = k * step;
     const y = h - ((v - min) / range) * h;
     path += (path ? ' L ' : 'M ') + x.toFixed(2) + ' ' + y.toFixed(2);
@@ -43,20 +33,38 @@ function toPath(data: Array<number | null>, w: number, h: number) {
   return path;
 }
 
-export default function MiniIndicator({ name, value, series, width = 220, height = 48, thresholds, histogram, showScale = true }: Props) {
-  const path = toPath(series, width, height);
-  const display = value === null || value === undefined ? '—' : (isFinite(value as number) ? (value as number).toFixed(2) : String(value));
-  // Normalized last point (based on valid values only)
-  const vals = series.map(v => (v === null || v === undefined || Number.isNaN(v) ? NaN : (v as number)));
+export default function MiniIndicator({ name, value, series, width = 220, height = 48, thresholds, histogram, showScale = true, yDomain }: Props) {
+  const numericSeries = series.map(v => (v === null || v === undefined || Number.isNaN(v) ? NaN : (v as number)));
   const clean: number[] = [];
-  for (let i = 0; i < vals.length; i++) { const v = vals[i]; if (!Number.isNaN(v)) clean.push(v); }
-  const lastIndexNorm = clean.length ? clean.length - 1 : -1;
-  const min = clean.length ? Math.min(...clean) : 0;
-  const max = clean.length ? Math.max(...clean) : 1;
-  const range = (max - min) || 1;
-  const step = width / Math.max(1, clean.length - 1);
-  const lastX = lastIndexNorm >= 0 ? lastIndexNorm * step : 0;
-  const lastY = lastIndexNorm >= 0 ? height - ((clean[clean.length - 1] - min) / range) * height : height / 2;
+  for (let i = 0; i < numericSeries.length; i++) {
+    const v = numericSeries[i];
+    if (!Number.isNaN(v)) clean.push(v);
+  }
+
+  const hasData = clean.length > 0;
+  const domainMin = (() => {
+    if (yDomain) return yDomain.min;
+    if (hasData) return Math.min(...clean);
+    return 0;
+  })();
+  const domainMax = (() => {
+    if (yDomain) return yDomain.max;
+    if (hasData) return Math.max(...clean);
+    return 1;
+  })();
+  const safeMax = domainMax === domainMin ? domainMax + 1 : domainMax;
+  const range = safeMax - domainMin || 1;
+
+  const normalizedValues = clean.map(v => {
+    const clamped = Math.max(domainMin, Math.min(safeMax, v));
+    return clamped;
+  });
+
+  const path = histogram ? '' : toPath(normalizedValues, width, height, domainMin, safeMax);
+  const display = value === null || value === undefined ? '—' : (isFinite(value as number) ? (value as number).toFixed(2) : String(value));
+  const labelTop = safeMax;
+  const labelMid = domainMin + range / 2;
+  const labelBottom = domainMin;
 
   return (
     <div className="mini-indicator-row" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -78,11 +86,11 @@ export default function MiniIndicator({ name, value, series, width = 220, height
             </>
           )}
           {/* shaded threshold regions for indicators like RSI */}
-          {thresholds && (thresholds.low !== undefined || thresholds.high !== undefined) && clean.length > 0 && (
+          {thresholds && (thresholds.low !== undefined || thresholds.high !== undefined) && hasData && (
             (() => {
               const yFor = (val: number) => {
-                const clamped = Math.min(max, Math.max(min, val));
-                return height - ((clamped - min) / range) * height;
+                const clamped = Math.min(safeMax, Math.max(domainMin, val));
+                return height - ((clamped - domainMin) / range) * height;
               };
               const parts: React.ReactElement[] = [];
               if (thresholds.high !== undefined) {
@@ -99,17 +107,24 @@ export default function MiniIndicator({ name, value, series, width = 220, height
           {histogram ? (
             (() => {
               // draw bars for histogram series
-              const validVals: number[] = series
-                .map(v => (v === null || v === undefined || Number.isNaN(v) ? NaN : (v as number)))
-                .filter(v => !Number.isNaN(v));
-              const vMin = validVals.length ? Math.min(...validVals) : 0;
-              const vMax = validVals.length ? Math.max(...validVals) : 1;
-              const vRange = (vMax - vMin) || 1;
+              const validVals = clean;
               const validCount = validVals.length;
               const barW = width / Math.max(1, validCount);
-              const zeroY = height / 2;
+              const maxAbs = (() => {
+                if (yDomain) return Math.max(Math.abs(yDomain.min), Math.abs(yDomain.max)) || 1;
+                const maxima = validVals.map(v => Math.abs(v));
+                return maxima.length ? Math.max(...maxima) || 1 : 1;
+              })();
+              const zeroY = (() => {
+                if (!yDomain) return height / 2;
+                if (yDomain.max <= 0) return 0;
+                if (yDomain.min >= 0) return height;
+                const ratio = (0 - yDomain.min) / (yDomain.max - yDomain.min || 1);
+                return height - ratio * height;
+              })();
               return validVals.map((val, k) => {
-                const h = Math.min(height / 2, Math.abs((val - vMin) / vRange) * (height / 2));
+                const magnitude = Math.min(1, Math.abs(val) / maxAbs);
+                const h = magnitude * (height / 2);
                 const x = k * barW + barW * 0.1;
                 const barH = Math.max(1, h);
                 const y = val >= 0 ? zeroY - barH : zeroY;
@@ -126,11 +141,11 @@ export default function MiniIndicator({ name, value, series, width = 220, height
       </div>
       
       {/* Y-axis scale labels (min, mid, max) shown to the right */}
-      {showScale && clean.length > 0 && (
+      {showScale && hasData && (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-secondary)', width: 28, height: height, textAlign: 'right', paddingRight: 4, lineHeight: 1 }}>
-          <div>{max.toFixed(0)}</div>
-          <div>{((min + max) / 2).toFixed(0)}</div>
-          <div>{min.toFixed(0)}</div>
+          <div>{labelTop.toFixed(0)}</div>
+          <div>{labelMid.toFixed(0)}</div>
+          <div>{labelBottom.toFixed(0)}</div>
         </div>
       )}
     </div>
