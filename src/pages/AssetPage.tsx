@@ -8,6 +8,7 @@ import { PriceData } from '../types/price';
 import MiniIndicator from '../components/mini/MiniIndicator';
 import SMACombined from '../components/mini/SMACombined';
 import PriceVolumeExplorer from '../components/charts/PriceVolumeExplorer';
+import TimeExplorer from '../components/charts/TimeExplorer';
 
 // Minimal asset metadata used on the page (separate from per-price Asset points)
 interface AssetMeta {
@@ -22,6 +23,7 @@ export default function AssetPage() {
   const { ticker } = useParams<{ ticker: string }>();
   const [asset, setAsset] = useState<AssetMeta | null>(null);
   const [prices, setPrices] = useState<PriceData[]>([]);
+  const [fullPrices, setFullPrices] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<string>('1Y');
@@ -306,6 +308,31 @@ export default function AssetPage() {
     loadAssetData();
   }, [ticker, selectedRange]);
 
+  useEffect(() => {
+    if (!ticker) return;
+
+    setFullPrices([]);
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const history = await getAssetPrices(ticker);
+        if (isMounted) {
+          const today = new Date();
+          const sanitized = (history || []).filter(price => new Date(price.date) <= today);
+          setFullPrices(sanitized);
+        }
+      } catch (err) {
+        console.warn('Failed to load full price history for Time Explorer', err);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [ticker]);
+
   const candlestickData = useMemo(() => {
     if (!prices.length) return null;
 
@@ -515,6 +542,8 @@ export default function AssetPage() {
     return <div className="error-message">{error}</div>;
   }
 
+  const explorerPrices = fullPrices.length ? fullPrices : prices;
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -594,6 +623,18 @@ export default function AssetPage() {
               ))}
             </div>
             <div ref={returnsChartRef} className="chart-area"></div>
+          </div>
+        </ErrorBoundary>
+
+        <ErrorBoundary>
+          <div className="chart-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="card-label">Time Explorer</h3>
+              <button onClick={() => setExpandedCard('timeexplorer')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
+            </div>
+            <div className="chart-area" style={{ minHeight: 400 }}>
+              <TimeExplorer prices={explorerPrices} height={400} />
+            </div>
           </div>
         </ErrorBoundary>
 
@@ -713,6 +754,18 @@ export default function AssetPage() {
             ))}
           </div>
           <div ref={returnsChartRef} style={{ flex: 1, minHeight: 0, overflow: 'auto' }}></div>
+        </div>
+      )}
+
+      {expandedCard === 'timeexplorer' && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Time Explorer</h2>
+            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+            <TimeExplorer prices={explorerPrices} height={window.innerHeight - 120} />
+          </div>
         </div>
       )}
 

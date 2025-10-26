@@ -94,7 +94,13 @@ export default function PriceVolumeExplorer({ data, height = 440 }: Props) {
       z: zMatrix,
       surfacecolor: colorMatrix,
       type: 'surface' as const,
-      colorscale: [[0, 'rgb(255, 0, 0)'], [1, 'rgb(0, 255, 0)']],
+      colorscale: [
+        [0, 'rgb(110, 72, 36)'],        // rich brown
+        [0.25, 'rgb(139, 92, 51)'],
+        [0.5, 'rgb(101, 126, 171)'],
+        [0.75, 'rgb(59, 100, 187)'],
+        [1, 'rgb(29, 78, 216)']         // deep blue
+      ],
       showscale: true,
       colorbar: {
         title: 'Volume',
