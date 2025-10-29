@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import Plotly from 'plotly.js-dist-min';
-
 import { Data, Layout, Config } from 'plotly.js';
+import { usePlotlyTheme } from '../../hooks/usePlotlyTheme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface StockChartProps {
   data: Data[];
@@ -10,9 +11,8 @@ interface StockChartProps {
 
 const StockChart: React.FC<StockChartProps> = ({ data, scaleType }) => {
   const chartRef = useRef<HTMLDivElement>(null);
-  const themeKey = typeof document !== 'undefined'
-    ? (document.documentElement.classList.contains('theme-night') ? 'night' : 'day')
-    : 'day';
+  const plotlyTheme = usePlotlyTheme();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!chartRef.current || data.length === 0) {
@@ -20,11 +20,7 @@ const StockChart: React.FC<StockChartProps> = ({ data, scaleType }) => {
     }
 
     const styles = getComputedStyle(document.documentElement);
-    const plotBackground = styles.getPropertyValue('--bg-card')?.trim() || '#0b1539';
-    const paperBackground = styles.getPropertyValue('--bg-panel')?.trim() || '#050d26';
-    const textColor = styles.getPropertyValue('--text')?.trim() || '#f1f5ff';
-    const subtleText = styles.getPropertyValue('--text-muted')?.trim() || 'rgba(241,245,255,0.6)';
-    const gridColor = styles.getPropertyValue('--gridline-color')?.trim() || 'rgba(120,146,220,0.2)';
+    const subtleText = styles.getPropertyValue('--text-muted')?.trim() || plotlyTheme.font.color;
 
     const layout: Partial<Layout> = {
       autosize: true,
@@ -42,30 +38,30 @@ const StockChart: React.FC<StockChartProps> = ({ data, scaleType }) => {
       },
       font: {
         family: styles.getPropertyValue('--font-family-sans')?.trim() || 'Inter, sans-serif',
-        color: textColor
+        color: plotlyTheme.font.color
       },
       yaxis: {
         type: scaleType,
         autorange: true,
         title: { text: 'Price', font: { size: 12, color: subtleText } },
         tickfont: { color: subtleText },
-        gridcolor: gridColor,
-        zerolinecolor: gridColor
+        gridcolor: plotlyTheme.yaxis.gridcolor,
+        zerolinecolor: plotlyTheme.yaxis.zerolinecolor
       },
       xaxis: {
         rangeslider: { visible: false },
         type: 'date',
         tickfont: { color: subtleText },
-        gridcolor: gridColor
+        gridcolor: plotlyTheme.xaxis.gridcolor
       },
-      plot_bgcolor: plotBackground,
-      paper_bgcolor: paperBackground,
+      plot_bgcolor: plotlyTheme.plot_bgcolor,
+      paper_bgcolor: plotlyTheme.paper_bgcolor,
       hovermode: 'x unified',
       hoverlabel: {
-        bgcolor: paperBackground,
-        bordercolor: gridColor,
+        bgcolor: plotlyTheme.paper_bgcolor,
+        bordercolor: plotlyTheme.xaxis.gridcolor,
         font: {
-          color: textColor,
+          color: plotlyTheme.font.color,
           family: styles.getPropertyValue('--font-family-sans')?.trim() || 'Inter, sans-serif'
         }
       }
@@ -83,7 +79,7 @@ const StockChart: React.FC<StockChartProps> = ({ data, scaleType }) => {
         Plotly.purge(chartRef.current);
       }
     };
-  }, [data, scaleType, themeKey]);
+  }, [data, scaleType, theme, plotlyTheme]);
 
   return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
 };

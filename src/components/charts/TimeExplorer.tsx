@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 // @ts-ignore
 import Plotly from 'plotly.js-dist-min';
 import { PriceData } from '../../types/price';
+import { usePlotlyTheme } from '../../hooks/usePlotlyTheme';
 
 interface TimeExplorerProps {
   prices: PriceData[];
@@ -18,12 +19,9 @@ const windowLengths: Record<Window, number> = {
   year: 252
 };
 
-function getYearColor(index: number, total: number): string {
-  if (total <= 1) return 'hsl(213, 90%, 38%)';
-  const maxLight = 72;
-  const minLight = 32;
-  const lightness = maxLight - ((maxLight - minLight) * index) / (total - 1);
-  return `hsl(213, 90%, ${lightness}%)`;
+function getYearColor(index: number, total: number, chartColors: string[]): string {
+  // Cycle through theme colors based on year index
+  return chartColors[index % chartColors.length];
 }
 
 function getISOWeekNumber(date: Date): number {
@@ -40,6 +38,7 @@ function getQuarterFromMonth(monthIndex: number): number {
 
 export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const plotlyTheme = usePlotlyTheme();
   const [windowType, setWindowType] = useState<Window>('week');
   const [measure, setMeasure] = useState<Measure>('close');
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
@@ -98,7 +97,22 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
 
       if (!filtered.length) return;
 
-      const baseline = filtered[0][measure];
+      // Get baseline from the PREVIOUS period's last value
+      const firstFilteredDate = new Date(filtered[0].date);
+      const baseline = (() => {
+        // Find all data points before the current period
+        const priorData = data.filter(entry => new Date(entry.date) < firstFilteredDate);
+        
+        if (!priorData.length) {
+          // If no prior data exists, use the first value of current period
+          return filtered[0][measure];
+        }
+        
+        // Get the last (most recent) prior data point
+        const sortedPrior = priorData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return sortedPrior[0][measure];
+      })();
+      
       if (baseline === undefined || baseline === null || baseline === 0) return;
 
       const yValues: Array<number | null> = new Array(expectedLength).fill(null);
@@ -118,7 +132,7 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
         mode: 'lines+markers',
         name: `${year}`,
         line: {
-          color: getYearColor(idx, totalYears),
+          color: getYearColor(idx, totalYears, plotlyTheme.chartColors),
           width: 2
         },
         marker: { size: 6 },
@@ -129,7 +143,7 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
     });
 
     return traces;
-  }, [yearBuckets, windowType, selectedWeek, selectedMonth, selectedQuarter, measure, hiddenYears]);
+  }, [yearBuckets, windowType, selectedWeek, selectedMonth, selectedQuarter, measure, hiddenYears, plotlyTheme]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -143,20 +157,17 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
     const layout = {
       height,
       margin: { t: 110, r: 10, l: 60, b: 40 },
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
+      ...plotlyTheme,
       hovermode: 'x unified' as const,
       showlegend: false,
       xaxis: {
-        title: { text: 'Day' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)',
+        title: { text: 'Day', font: { color: plotlyTheme.font.color } },
+        ...plotlyTheme.xaxis,
         range: [0.5, expectedLength + 0.5]
       },
       yaxis: {
-        title: { text: '% Change from First Day' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        title: { text: '% Change from Previous Period', font: { color: plotlyTheme.font.color } },
+        ...plotlyTheme.yaxis
       }
     };
 
@@ -167,7 +178,7 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
         Plotly.purge(chartRef.current);
       }
     };
-  }, [chartData, height, windowType]);
+  }, [chartData, height, windowType, plotlyTheme]);
 
   useEffect(() => {
     setHiddenYears([]);
@@ -177,10 +188,10 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
     const totalYears = yearBuckets.length;
     return yearBuckets.map(([year], idx) => ({
       year,
-      color: getYearColor(idx, totalYears),
+      color: getYearColor(idx, totalYears, plotlyTheme.chartColors),
       hidden: hiddenYears.includes(year)
     }));
-  }, [yearBuckets, hiddenYears]);
+  }, [yearBuckets, hiddenYears, plotlyTheme]);
 
   const toggleYear = useCallback((year: number) => {
     setHiddenYears(prev => (

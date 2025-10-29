@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 // @ts-ignore
 import Plotly from 'plotly.js-dist-min';
 import { PriceData } from '../../types/price';
+import { usePlotlyTheme } from '../../hooks/usePlotlyTheme';
 
 interface Props {
   data: PriceData[];
@@ -11,6 +12,7 @@ interface Props {
 export default function PriceVolumeExplorer({ data, height = 440 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showControls, setShowControls] = React.useState(true);
+  const plotlyTheme = usePlotlyTheme();
 
   useEffect(() => {
     if (!containerRef.current || !data || data.length < 2) return;
@@ -95,11 +97,11 @@ export default function PriceVolumeExplorer({ data, height = 440 }: Props) {
       surfacecolor: colorMatrix,
       type: 'surface' as const,
       colorscale: [
-        [0, 'rgb(110, 72, 36)'],        // rich brown
-        [0.25, 'rgb(139, 92, 51)'],
-        [0.5, 'rgb(101, 126, 171)'],
-        [0.75, 'rgb(59, 100, 187)'],
-        [1, 'rgb(29, 78, 216)']         // deep blue
+        [0, plotlyTheme.chartColors[0]],
+        [0.25, plotlyTheme.chartColors[1]],
+        [0.5, plotlyTheme.chartColors[2]],
+        [0.75, plotlyTheme.chartColors[3]],
+        [1, plotlyTheme.chartColors[4]]
       ],
       showscale: true,
       colorbar: {
@@ -112,32 +114,33 @@ export default function PriceVolumeExplorer({ data, height = 440 }: Props) {
     const layout: any = {
       height: height,
       margin: { t: 20, r: 10, l: 50, b: 20 },
-      paper_bgcolor: 'rgba(243, 244, 246, 1)',
-      plot_bgcolor: 'rgba(243, 244, 246, 1)',
+      paper_bgcolor: plotlyTheme.paper_bgcolor,
+      plot_bgcolor: plotlyTheme.plot_bgcolor,
+      font: plotlyTheme.font,
       scene: {
         xaxis: { 
           title: 'X',
-          titlefont: { size: 10 },
-          gridcolor: 'rgba(200,200,200,0.5)',
+          titlefont: { size: 10, color: plotlyTheme.font.color },
+          gridcolor: plotlyTheme.xaxis.gridcolor,
           showbackground: true,
           tickvals: xTickVals,
           ticktext: xTickTexts,
-          tickfont: { size: 8 }
+          tickfont: { size: 8, color: plotlyTheme.font.color }
         },
         yaxis: { 
           title: 'Y',
-          titlefont: { size: 10 },
-          gridcolor: 'rgba(200,200,200,0.5)',
+          titlefont: { size: 10, color: plotlyTheme.font.color },
+          gridcolor: plotlyTheme.yaxis.gridcolor,
           showbackground: true,
           type: 'linear',
-          tickfont: { size: 8 }
+          tickfont: { size: 8, color: plotlyTheme.font.color }
         },
         zaxis: { 
           title: 'Z',
-          titlefont: { size: 10 },
-          gridcolor: 'rgba(200,200,200,0.5)',
+          titlefont: { size: 10, color: plotlyTheme.font.color },
+          gridcolor: plotlyTheme.xaxis.gridcolor,
           showbackground: true,
-          tickfont: { size: 8 }
+          tickfont: { size: 8, color: plotlyTheme.font.color }
         },
         // Camera positioned to view X-Z plane from bottom-left
         camera: {
@@ -346,7 +349,7 @@ export default function PriceVolumeExplorer({ data, height = 440 }: Props) {
         Plotly.purge(containerRef.current);
       }
     };
-  }, [data, height]);
+  }, [data, height, plotlyTheme]);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>

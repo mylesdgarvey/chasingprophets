@@ -1,0 +1,225 @@
+/* Asset Page - Professional Layout matching Dashboard */
+.asset-page-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  width: 100%;
+}
+
+/* Hero Section with Integrated Chart */
+.asset-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  padding: var(--spacing-8);
+  overflow: hidden;
+  background: var(--bg-hero-gradient);
+  color: var(--text-light);
+  border-radius: var(--radius-lg);
+}
+
+.hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-6);
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  flex: 1;
+}
+
+.asset-eyebrow {
+  text-transform: uppercase;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.22em;
+  opacity: 0.7;
+}
+
+.asset-title {
+  margin: 0;
+  font-size: 42px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.asset-ticker {
+  font-size: var(--font-size-lg);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.hero-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  border-radius: var(--radius-md);
+  background: rgba(2, 8, 24, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.control-label {
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.pill-group {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.pill:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.pill.active {
+  background: rgba(108, 199, 255, 0.24);
+  border-color: rgba(108, 199, 255, 0.8);
+  color: #fff;
+}
+
+/* Hero Chart Section */
+.hero-chart {
+  margin-top: var(--spacing-4);
+}
+
+.hero-chart .chart-container {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Remove old main-chart-section styles */
+
+/* Widgets Grid - 3 Columns */
+.widgets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-6);
+}
+
+/* Legacy support for old panel classes - can be removed later */
+.chart-panel,
+.analytics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  padding: var(--spacing-6);
+  border-radius: var(--radius-md);
+}
+
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text);
+}
+
+.panel-header span {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.window-selector {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.indicators-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.indicator-item {
+  padding: var(--spacing-3);
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+}
+
+.no-data {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Chart Containers */
+.chart-container {
+  min-height: 380px;
+  background: var(--bg-chart-panel);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+}
+
+.plotly-chart {
+  width: 100%;
+  min-height: 360px;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .charts-grid,
+  .analytics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .hero-header {
+    flex-direction: column;
+  }
+  
+  .charts-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .asset-page-screen {
+    gap: var(--spacing-6);
+  }
+
+  .asset-hero-main {
+    padding: var(--spacing-6);
+  }
+
+  .asset-title {
+    font-size: 32px;
+  }
+}

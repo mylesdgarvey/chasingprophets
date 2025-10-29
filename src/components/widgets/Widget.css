@@ -1,0 +1,134 @@
+/* Widget Component Styles */
+.widget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  padding: var(--spacing-6);
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.widget:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+.widget-title h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text);
+}
+
+.widget-subtitle {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-1);
+}
+
+.widget-expand-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.widget-expand-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-strong);
+  transform: scale(1.1);
+}
+
+.widget-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Expanded/Fullscreen state */
+.widget-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-6);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.widget-fullscreen {
+  width: 95vw;
+  height: 90vh;
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.widget-fullscreen .widget-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.widget-content-expanded {
+  height: 100%;
+}
+
+/* Hide the inline widget when expanded */
+.widget-expanded {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .widget-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .widget-overlay {
+    padding: 0;
+  }
+}

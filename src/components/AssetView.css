@@ -6,8 +6,8 @@
   width: 100%;
   max-width: none;
   box-sizing: border-box;
-  /* Ensure container spans full width */
   flex: 1;
+  background: var(--bg-secondary);
 }
 
 .asset-header {
@@ -15,10 +15,10 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 32px;
-  background: var(--bg-primary);
+  background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: var(--box-shadow);
-  /* Ensure header takes full width */
+  border: 1px solid var(--border-light);
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -34,7 +34,7 @@
   margin: 0;
   font-size: 32px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .ticker {
@@ -58,7 +58,7 @@
 .current-price {
   font-size: 36px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text);
   margin-bottom: 4px;
 }
 
@@ -77,42 +77,56 @@
 
 .market-metrics {
   display: grid;
-  /* Fixed 4-column layout on wide screens but allow natural resizing when container shrinks.
-     Use fractions so widths scale with container (sidebar collapse/expand). */
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   padding: 0;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
-  /* Ensure grid spans full width of parent */
   flex: 1;
   align-items: stretch;
   align-content: start;
   grid-auto-rows: auto;
 }
 
-.metric-card {
-  /* light blue background for metric cards to match main cards */
-  background: #eef6ff;
+/* Theme-aware metric cards */
+.theme-night .metric-card {
+  background: var(--bg-metric-card);
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid rgba(14,82,167,0.06);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--box-shadow);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* Ensure cards fill their grid cells but allow natural height */
   width: 100%;
   height: auto;
   box-sizing: border-box;
   overflow: hidden;
   align-self: stretch;
   min-height: 120px;
-  /* create stacking context to avoid rendering overlap artifacts */
   isolation: isolate;
   will-change: transform;
-  /* allow the card to shrink inside grid cells (prevents overflow causing intersections) */
+  min-width: 0;
+}
+
+.theme-day .metric-card {
+  background: var(--bg-metric-card);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--box-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  align-self: stretch;
+  min-height: 120px;
+  isolation: isolate;
+  will-change: transform;
   min-width: 0;
 }
 
@@ -120,7 +134,6 @@
   font-size: 14px;
   color: var(--text-secondary);
   margin-bottom: 4px;
-  /* Prevent long labels from breaking layout */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -129,8 +142,7 @@
 .metric-value {
   font-size: 24px;
   font-weight: 600;
-  color: var(--text-primary);
-  /* Ensure values don't wrap */
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -141,7 +153,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* Take remaining space in card */
   flex: 1;
 }
 
@@ -153,14 +164,15 @@
   align-items: center;
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-light);
 }
 
 .chart-section {
-  background: var(--bg-primary);
+  background: var(--bg-chart-panel);
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-light);
   min-height: 400px;
 }
 
@@ -171,17 +183,18 @@
 }
 
 .analysis-card {
-  background: var(--bg-primary);
+  background: var(--bg-panel);
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-light);
 }
 
 .analysis-card h3 {
   margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .indicator-grid {
@@ -204,7 +217,7 @@
 .indicator-value {
   font-size: 16px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .indicator-value.positive {
@@ -212,7 +225,7 @@
 }
 
 .indicator-value.negative {
-  color: var(--error);
+  color: var(--danger);
 }
 
 .loading-state,
@@ -222,15 +235,16 @@
   justify-content: center;
   align-items: center;
   height: 200px;
-  background: var(--bg-primary);
+  background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-light);
   color: var(--text-secondary);
   font-size: 16px;
 }
 
 .error-state {
-  color: var(--error);
+  color: var(--danger);
 }
 
 /* Maintain 4 columns on larger screens */

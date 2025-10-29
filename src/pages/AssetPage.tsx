@@ -9,6 +9,10 @@ import MiniIndicator from '../components/mini/MiniIndicator';
 import SMACombined from '../components/mini/SMACombined';
 import PriceVolumeExplorer from '../components/charts/PriceVolumeExplorer';
 import TimeExplorer from '../components/charts/TimeExplorer';
+import { usePlotlyTheme } from '../hooks/usePlotlyTheme';
+import { useTheme } from '../context/ThemeContext';
+import Widget from '../components/widgets/Widget';
+import './AssetPage.css';
 
 // Minimal asset metadata used on the page (separate from per-price Asset points)
 interface AssetMeta {
@@ -21,13 +25,14 @@ interface AssetMeta {
 
 export default function AssetPage() {
   const { ticker } = useParams<{ ticker: string }>();
+  const plotlyTheme = usePlotlyTheme();
+  const { theme } = useTheme();
   const [asset, setAsset] = useState<AssetMeta | null>(null);
   const [prices, setPrices] = useState<PriceData[]>([]);
   const [fullPrices, setFullPrices] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<string>('1Y');
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   // Downsample daily prices into weekly OHLCV (week start = Monday)
   function downsampleToWeekly(prices: PriceData[]): PriceData[] {
@@ -379,6 +384,43 @@ export default function AssetPage() {
   const candlestickData = useMemo(() => {
     if (!candlestickSource.length) return null;
 
+    // For psychedelic theme, create color-cycling candlesticks using individual bars
+    const isPsychedelic = theme === 'psychedelic';
+    
+    if (isPsychedelic) {
+      // Create cycling colors for psychedelic effect
+      const upColors = ['#00ff88', '#39ff14', '#00ffaa', '#33ff66', '#00ff99', '#66ffaa'];
+      const downColors = ['#ff1493', '#ff007f', '#ff0066', '#ff3399', '#ff00aa', '#ff66cc'];
+      
+      // Create individual bar traces with cycling colors
+      const traces = candlestickSource.map((p, i) => {
+        const isUp = p.close >= p.open;
+        const colorIndex = i % 6;
+        const fillColor = isUp ? upColors[colorIndex] : downColors[colorIndex];
+        const lineColor = isUp ? upColors[(colorIndex + 1) % 6] : downColors[(colorIndex + 1) % 6];
+        
+        return {
+          x: [p.date],
+          open: [p.open],
+          high: [p.high],
+          low: [p.low],
+          close: [p.close],
+          type: 'candlestick' as const,
+          increasing: {
+            line: { color: lineColor, width: 2 },
+            fillcolor: fillColor
+          },
+          decreasing: {
+            line: { color: lineColor, width: 2 },
+            fillcolor: fillColor
+          },
+          showlegend: false
+        };
+      });
+
+      return traces;
+    }
+
     return [{
       x: candlestickSource.map(p => p.date),
       open: candlestickSource.map(p => p.open),
@@ -386,9 +428,11 @@ export default function AssetPage() {
       low: candlestickSource.map(p => p.low),
       close: candlestickSource.map(p => p.close),
       type: 'candlestick' as const,
-      name: ticker
+      name: ticker,
+      increasing: plotlyTheme.increasing,
+      decreasing: plotlyTheme.decreasing
     }];
-  }, [candlestickSource, ticker]);
+  }, [candlestickSource, ticker, plotlyTheme, theme]);
 
   // Calculate returns for multiple time windows
   function calculateReturnsSeries(priceData: PriceData[], period: number, priceField: 'open' | 'close' | 'high' | 'low') {
@@ -424,31 +468,35 @@ export default function AssetPage() {
         y: calculateReturnsSeries(prices, period, 'open'),
         type: 'scatter' as const,
         mode: 'lines' as const,
-        name: 'Open-to-Open'
+        name: 'Open-to-Open',
+        line: { color: plotlyTheme.chartColors[0], width: 2 }
       },
       {
         x: prices.map(p => p.date),
         y: calculateReturnsSeries(prices, period, 'close'),
         type: 'scatter' as const,
         mode: 'lines' as const,
-        name: 'Close-to-Close'
+        name: 'Close-to-Close',
+        line: { color: plotlyTheme.chartColors[1], width: 2 }
       },
       {
         x: prices.map(p => p.date),
         y: calculateReturnsSeries(prices, period, 'high'),
         type: 'scatter' as const,
         mode: 'lines' as const,
-        name: 'High-to-High'
+        name: 'High-to-High',
+        line: { color: plotlyTheme.chartColors[2], width: 2 }
       },
       {
         x: prices.map(p => p.date),
         y: calculateReturnsSeries(prices, period, 'low'),
         type: 'scatter' as const,
         mode: 'lines' as const,
-        name: 'Low-to-Low'
+        name: 'Low-to-Low',
+        line: { color: plotlyTheme.chartColors[3], width: 2 }
       }
     ];
-  }, [prices, returnsWindow]);
+  }, [prices, returnsWindow, plotlyTheme]);
 
   const candlestickChartRef = useRef<HTMLDivElement>(null);
   const returnsChartRef = useRef<HTMLDivElement>(null);
@@ -458,22 +506,19 @@ export default function AssetPage() {
     if (!candlestickChartRef.current) return;
 
     // Adjust height based on whether expanded
-    const candlestickHeight = expandedCard === 'price' ? window.innerHeight - 120 : 500;
+    const candlestickHeight = 460;
 
     // Plot candlestick chart (title moved to card label)
     const candlestickLayout = {
       height: candlestickHeight,
       margin: { t: 40, r: 10, l: 60, b: 40 },
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
+      ...plotlyTheme,
       xaxis: {
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        ...plotlyTheme.xaxis
       },
       yaxis: {
-        title: { text: 'Price' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        ...plotlyTheme.yaxis,
+        title: { text: 'Price', font: { color: plotlyTheme.font.color } }
       }
     };
 
@@ -484,31 +529,32 @@ export default function AssetPage() {
         Plotly.purge(candlestickChartRef.current);
       }
     };
-  }, [candlestickData, ticker, expandedCard]);
+  }, [candlestickData, ticker, plotlyTheme]);
 
   useEffect(() => {
     if (!returnData) return;
     if (!returnsChartRef.current) return;
 
     // Adjust height based on whether expanded
-    const returnHeight = expandedCard === 'returns' ? window.innerHeight - 120 : 400;
+    const returnHeight = 360;
 
     // Plot returns chart (title moved to card label)
     const returnLayout = {
       height: returnHeight,
       margin: { t: 40, r: 10, l: 60, b: 40 },
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
+      ...plotlyTheme,
       showlegend: true,
-      legend: { orientation: 'h' as const, y: -0.2 },
+      legend: { 
+        orientation: 'h' as const, 
+        y: -0.2,
+        font: { color: plotlyTheme.font.color }
+      },
       xaxis: {
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        ...plotlyTheme.xaxis
       },
       yaxis: {
-        title: { text: 'Return (%)' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        ...plotlyTheme.yaxis,
+        title: { text: 'Return (%)', font: { color: plotlyTheme.font.color } }
       }
     };
 
@@ -519,7 +565,7 @@ export default function AssetPage() {
         Plotly.purge(returnsChartRef.current);
       }
     };
-  }, [returnData, expandedCard]);
+  }, [returnData, plotlyTheme]);
 
   // Ensure Plotly charts resize when their container size changes (e.g. sidebar toggles, or when expanded)
   useEffect(() => {
@@ -567,7 +613,7 @@ export default function AssetPage() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [expandedCard]);
+  }, []);
 
   if (error) {
     return <div className="error-message">{error}</div>;
@@ -580,103 +626,104 @@ export default function AssetPage() {
   }
 
   return (
-    <div className="asset-page">
-      <header className="page-header">
-        <div className="title-block">
-          <h1 className="title">{asset?.ticker || asset?.name}</h1>
-          {asset?.name && asset?.name !== asset?.ticker ? (
-            <div className="subtitle">{asset?.name}</div>
-          ) : null}
-        </div>
-        <div className="controls">
-          {/* Time range selector */}
-          <div className="range-selector" role="tablist" aria-label="Time range">
-            {['30D','1M','3M','6M','1Y','YTD','5Y','10Y'].map(r => (
-              <button
-                key={r}
-                className={`range-btn ${selectedRange === r ? 'active' : ''}`}
-                onClick={() => setSelectedRange(r)}
-                aria-pressed={selectedRange === r}
-              >
-                {r}
-              </button>
-            ))}
+    <div className="asset-page-screen">
+      {/* Hero Section with Price Chart */}
+      <section className="asset-hero-main glass-surface">
+        <div className="hero-header">
+          <div className="hero-content">
+            <span className="asset-eyebrow">Asset Overview</span>
+            <h1 className="asset-title">{asset?.name || asset?.ticker || ticker}</h1>
+            {asset?.ticker && asset?.ticker !== asset?.name ? (
+              <span className="asset-ticker">{asset?.ticker}</span>
+            ) : null}
+          </div>
+          <div className="hero-controls">
+            {/* Time range selector */}
+            <div className="control-group">
+              <label className="control-label">Time Window</label>
+              <div className="pill-group" role="tablist" aria-label="Time range">
+                  {['30D','1M','3M','6M','1Y','YTD','5Y','10Y'].map(r => (
+                  <button
+                    key={r}
+                    className={`pill ${selectedRange === r ? 'active' : ''}`}
+                    onClick={() => setSelectedRange(r)}
+                    aria-pressed={selectedRange === r}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </header>
+        
+        {/* Price History Chart inside hero */}
+        <div className="hero-chart">
+          <div className="chart-container">
+            <div ref={candlestickChartRef} className="plotly-chart"></div>
+          </div>
+        </div>
+      </section>
 
-      <div className="cards-grid" style={expandedCard ? { display: 'none' } : {}}>
+      {/* Widgets Grid - 3 Columns */}
+      <div className="widgets-grid">
         <ErrorBoundary>
-          <div className="chart-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="card-label">Price History</h3>
-              <button onClick={() => setExpandedCard('price')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
+          <Widget
+            id="price-volume-explorer"
+            title="Price-Volume Explorer"
+            subtitle="Interactive 3D Analysis"
+          >
+            <div className="chart-container">
+              <PriceVolumeExplorer data={prices} height={380} />
             </div>
-            <div ref={candlestickChartRef} className="chart-area"></div>
-          </div>
-        </ErrorBoundary>
-
-        <div className="chart-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="card-label">Price-Volume Explorer</h3>
-            <button onClick={() => setExpandedCard('pve')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
-          </div>
-          <div className="chart-area" style={{ minHeight: 440 }}>
-            <PriceVolumeExplorer data={prices} height={440} />
-          </div>
-        </div>
-
-        <ErrorBoundary>
-          <div className="chart-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 className="card-label">Daily Returns</h3>
-              <button onClick={() => setExpandedCard('returns')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
-            </div>
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              {['1D', '5D', '20D', '60D', '120D', '240D'].map(window => (
-                <button
-                  key={window}
-                  onClick={() => setReturnsWindow(window)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    border: returnsWindow === window ? '2px solid var(--primary)' : '1px solid rgba(15,23,42,0.2)',
-                    background: returnsWindow === window ? 'var(--primary)' : 'transparent',
-                    color: returnsWindow === window ? 'white' : 'var(--text)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: returnsWindow === window ? '600' : '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {window === '1D' ? 'DoD' : window === '5D' ? 'WoW' : window === '20D' ? 'MoM' : window === '60D' ? 'QoQ' : window === '120D' ? 'HyoHy' : 'YoY'}
-                </button>
-              ))}
-            </div>
-            <div ref={returnsChartRef} className="chart-area"></div>
-          </div>
+          </Widget>
         </ErrorBoundary>
 
         <ErrorBoundary>
-          <div className="chart-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="card-label">Time Explorer</h3>
-              <button onClick={() => setExpandedCard('timeexplorer')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
+          <Widget
+            id="daily-returns"
+            title="Daily Returns"
+            subtitle="Return Distribution Over Time"
+          >
+            <div className="control-group" style={{ marginBottom: 'var(--spacing-4)' }}>
+              <div className="pill-group">
+                {['1D', '5D', '20D', '60D', '120D', '240D'].map(window => (
+                  <button
+                    key={window}
+                    onClick={() => setReturnsWindow(window)}
+                    className={`pill ${returnsWindow === window ? 'active' : ''}`}
+                  >
+                    {window === '1D' ? 'DoD' : window === '5D' ? 'WoW' : window === '20D' ? 'MoM' : window === '60D' ? 'QoQ' : window === '120D' ? 'HyoHy' : 'YoY'}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="chart-area" style={{ minHeight: 400 }}>
-              <TimeExplorer prices={explorerPrices} height={400} />
+            <div className="chart-container">
+              <div ref={returnsChartRef} className="plotly-chart"></div>
             </div>
-          </div>
+          </Widget>
         </ErrorBoundary>
 
-        <div className="chart-card placeholder-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="card-label">Technical Analysis</h3>
-            <button onClick={() => setExpandedCard('technical')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>⛶</button>
-          </div>
-          <div className="placeholder-content">
+        <ErrorBoundary>
+          <Widget
+            id="time-explorer"
+            title="Time Explorer"
+            subtitle="Historical Timeline View"
+          >
+            <div className="chart-container">
+              <TimeExplorer prices={explorerPrices} height={360} />
+            </div>
+          </Widget>
+        </ErrorBoundary>
+
+        <Widget
+          id="technical-analysis"
+          title="Technical Analysis"
+          subtitle="Key Indicators"
+        >
+          <div className="indicators-content">
             {prices && prices.length && rangeIndicators ? (
-              <div className="mini-indicators">
+              <>
                 {(() => {
                   const getLastValue = (series: Array<number | null>) => {
                     for (let i = series.length - 1; i >= 0; i--) {
@@ -706,10 +753,10 @@ export default function AssetPage() {
 
                   return (
                     <>
-                      <div style={{ marginBottom: 12 }}>
+                      <div className="indicator-item">
                         <SMACombined sma20={sma20Series} sma50={sma50Series} sma200={sma200Series} currentValue={lastClose} />
                       </div>
-                      <div style={{ marginBottom: 12 }}>
+                      <div className="indicator-item">
                         <MiniIndicator
                           name="RSI(14)"
                           value={getLastValue(rsiSeriesData)}
@@ -718,7 +765,7 @@ export default function AssetPage() {
                           yDomain={{ min: 0, max: 100 }}
                         />
                       </div>
-                      <div style={{ marginBottom: 12 }}>
+                      <div className="indicator-item">
                         <MiniIndicator
                           name="MACD(hist)"
                           value={getLastValue(macdHistSeries)}
@@ -730,328 +777,13 @@ export default function AssetPage() {
                     </>
                   );
                 })()}
-              </div>
+              </>
             ) : (
-              <div>No analysis available for this range.</div>
+              <div className="no-data">No analysis available for this range.</div>
             )}
           </div>
-        </div>
+        </Widget>
       </div>
-
-      {/* Expanded card views - positioned absolutely within cards-grid area */}
-      {expandedCard === 'price' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Price History</h2>
-            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
-          </div>
-          <div ref={candlestickChartRef} style={{ flex: 1, minHeight: 0, overflow: 'auto' }}></div>
-        </div>
-      )}
-
-      {expandedCard === 'pve' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Price-Volume Explorer</h2>
-            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
-          </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <PriceVolumeExplorer data={prices} height={window.innerHeight - 120} />
-          </div>
-        </div>
-      )}
-
-      {expandedCard === 'returns' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Daily Returns</h2>
-            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
-          </div>
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {['1D', '5D', '20D', '60D', '120D', '240D'].map(window => (
-              <button
-                key={window}
-                onClick={() => setReturnsWindow(window)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '6px',
-                  border: returnsWindow === window ? '2px solid var(--primary)' : '1px solid rgba(15,23,42,0.2)',
-                  background: returnsWindow === window ? 'var(--primary)' : 'transparent',
-                  color: returnsWindow === window ? 'white' : 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: returnsWindow === window ? '600' : '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {window === '1D' ? 'DoD' : window === '5D' ? 'WoW' : window === '20D' ? 'MoM' : window === '60D' ? 'QoQ' : window === '120D' ? 'HyoHy' : 'YoY'}
-              </button>
-            ))}
-          </div>
-          <div ref={returnsChartRef} style={{ flex: 1, minHeight: 0, overflow: 'auto' }}></div>
-        </div>
-      )}
-
-      {expandedCard === 'timeexplorer' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Time Explorer</h2>
-            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <TimeExplorer prices={explorerPrices} height={window.innerHeight - 120} />
-          </div>
-        </div>
-      )}
-
-      {expandedCard === 'technical' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '20px', overflowY: 'auto', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Technical Analysis</h2>
-            <button onClick={() => setExpandedCard(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}>✕</button>
-          </div>
-          <div className="mini-indicators">
-            {prices && prices.length > 0 ? (
-              (() => {
-                const closes = prices.map(p => p.close);
-                const sma20Series = smaSeries(closes, 20);
-                const sma50Series = smaSeries(closes, 50);
-                const sma200Series = smaSeries(closes, 200);
-                
-                return (
-                  <>
-                    <div style={{ marginBottom: 12 }}>
-                      <SMACombined sma20={sma20Series || []} sma50={sma50Series || []} sma200={sma200Series || []} currentValue={closes[closes.length - 1]} />
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <MiniIndicator name="RSI(14)" value={(rsiSeries(closes, 14).slice().reverse().find((v: any) => v !== null && v !== undefined) as number | null) ?? null} series={rsiSeries(closes, 14)} thresholds={{ low: 30, high: 70 }} />
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <MiniIndicator name="MACD(hist)" value={(macdSeries(closes).slice().reverse().find((v: any) => v !== null && v !== undefined) as number | null) ?? null} series={macdSeries(closes)} histogram={true} />
-                    </div>
-                  </>
-                );
-              })()
-            ) : (
-              <div>No analysis available for this range.</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes fadeOut {
-          from {
-            opacity: 1;
-            transform: scale(1);
-          }
-          to {
-            opacity: 0;
-            transform: scale(0.98);
-          }
-        }
-
-        .expanded-card {
-          animation: fadeIn 0.15s ease-out;
-        }
-
-        .expanded-card.closing {
-          animation: fadeOut 0.15s ease-in forwards;
-        }
-
-        .asset-page {
-          display: flex;
-          flex-direction: column;
-          /* reduce top padding so the page header sits closer to the top */
-          padding: var(--spacing-4) 0;
-          width: 100%;
-          max-width: 100%;
-          gap: var(--spacing-6);
-          /* page background: white per user preference */
-          background: #ffffff;
-        }
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          /* slightly reduced top padding so the header isn't too far from the top of the page */
-          padding: 20px 32px 8px 32px; /* top right bottom left */
-          background: var(--bg-primary);
-          border-radius: var(--radius-lg);
-          box-shadow: var(--shadow-sm);
-          margin-bottom: 0; /* control separation via grid margin */
-        }
-        .title-block {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .subtitle {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin: 0;
-          line-height: 1.2;
-          font-weight: 500;
-        }
-        .title {
-          font-size: 28px;
-          font-weight: 600;
-          color: var(--text);
-          margin: 0;
-        }
-        .range-selector {
-          display: flex;
-          gap: 6px;
-          align-items: center;
-        }
-        .range-btn {
-          background: transparent;
-          border: 1px solid rgba(15,23,42,0.06);
-          padding: 6px 8px;
-          border-radius: 6px;
-          font-size: 12px;
-          cursor: pointer;
-        }
-        .range-btn.active {
-          background: var(--primary);
-          color: white;
-          border-color: var(--primary);
-        }
-        .cards-grid {
-          position: relative;
-          display: grid;
-          /* Stable 2-column layout: columns are equal fractions of the available width
-             so when the sidebar collapses the columns expand, and when it expands they compress. */
-          grid-template-columns: repeat(2, 1fr);
-          column-gap: 48px; /* bigger horizontal gap to clearly separate cards */
-          row-gap: 36px;
-          width: 100%;
-          margin: 8px 0 0 0; /* comfortable small gap between header and cards (~20px total with header padding) */
-          padding: 0 32px; /* ensure padding around grid so cards don't touch edges */
-          box-sizing: border-box;
-          background: transparent;
-          align-items: start;
-          align-content: start;
-          /* create a new stacking context so lifted/z-indexed children don't overlap neighbors */
-          isolation: isolate;
-          grid-auto-rows: auto;
-          min-height: 400px;
-        }
-
-        /* Mobile: single column */
-        @media (max-width: 767px) {
-          .cards-grid {
-            grid-template-columns: 1fr;
-            width: 100%;
-            margin: 16px 0 0 0;
-            padding: 0 16px;
-          }
-        }
-        .chart-card {
-          position: relative;
-          /* cards: slightly darker grey (not too dark) to increase contrast */
-          background: #f3f4f6; /* light grey */
-          border: 1px solid rgba(15,23,42,0.08);
-          border-radius: 12px;
-          padding: 20px;
-          /* stronger, always-visible shadow to delineate cards */
-          box-shadow: var(--shadow-xl);
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
-          /* Use min-height so cards can grow/shrink with layout; width drives layout */
-          min-height: 280px;
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          z-index: 0;
-          overflow: hidden;
-          /* allow the card to shrink inside grid cells */
-          min-width: 0;
-          box-sizing: border-box;
-        }
-        .chart-card:hover {
-          transform: translateY(-6px);
-          box-shadow: var(--shadow-xl);
-          z-index: 20; /* lift hovered card above neighbors */
-        }
-        .chart-card:after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 16px;
-          right: 16px;
-          height: 4px;
-          background: var(--primary);
-          border-radius: 2px;
-        }
-        .chart-area {
-          width: 100%;
-          /* let the chart area size naturally, but reserve a reasonable minimum */
-          min-height: 260px; /* main chart area; timeline can sit below */
-          height: auto;
-          /* Prevent Plotly or other children from forcing intrinsic width beyond the card */
-          min-width: 0;
-          max-width: 100%;
-          overflow: hidden;
-          box-sizing: border-box;
-        }
-        /* Force direct Plotly root containers to respect the chart-area bounds */
-        .chart-area > div {
-          width: 100% !important;
-          max-width: 100% !important;
-          box-sizing: border-box;
-          overflow: hidden;
-        }
-        .placeholder-card {
-          display: flex;
-          flex-direction: column;
-          /* put content in the top-left of the card */
-          align-items: flex-start;
-          justify-content: flex-start;
-        }
-        /* shared label style for all cards (same as Market Summary) */
-        .card-label {
-          color: var(--text);
-          margin: 0 0 var(--spacing-4) 0;
-          font-size: var(--font-size-lg);
-          font-weight: 600;
-        }
-        .mini-indicators {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .mini-indicator-row .mini-label div:first-child {
-          color: var(--text);
-        }
-        .placeholder-content {
-          color: var(--text-secondary);
-          font-size: var(--font-size-base);
-        }
-        /* Different accent colors for each card */
-        .chart-card:nth-child(1):after {
-          background: var(--primary);
-        }
-        .chart-card:nth-child(2):after {
-          background: var(--prophet-marketmind);
-        }
-        .chart-card:nth-child(3):after {
-          background: var(--prophet-timesage);
-        }
-        .chart-card:nth-child(4):after {
-          background: var(--prophet-quantum);
-        }
-      `}</style>
     </div>
   );
 }
