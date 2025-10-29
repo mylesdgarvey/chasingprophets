@@ -28,9 +28,10 @@ const THEME_OPTIONS: ThemeOption[] = [
 
 export default function Settings() {
   const { theme, setTheme, toggleTheme } = useTheme();
+  const themeClass = theme === 'day' ? 'theme-day' : 'theme-night';
 
   return (
-    <div className="settings-page">
+    <div className={`settings-page ${themeClass}`}>
       <header className="settings-header">
         <h1>Workspace preferences</h1>
         <p>Fine-tune how ChasingProphets feels across devices. These options update instantly so you can preview changes as you decide.</p>
