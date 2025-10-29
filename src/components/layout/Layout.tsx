@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { BarChart2, Database, Settings, Search, LogOut, Bell } from 'react-feather';
+import { useTheme } from '../../context/ThemeContext';
+import { BarChart2, Database, Settings, LogOut, Bell, Moon, Sun } from 'react-feather';
 import NotificationPopup from '../notifications/NotificationPopup';
 import SearchBox from '../controls/SearchBox';
 import { getUnreadCountForUser } from '../../services/notifications';
@@ -9,6 +10,7 @@ import './Layout.css';
 
 const Layout: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -57,7 +59,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="layout">
+    <div className={`layout layout-${theme}`}>
       <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="logo" onClick={toggleSidebar}>
           <img src="/logo.svg" alt="ChasingProphets" />
@@ -109,6 +111,14 @@ const Layout: React.FC = () => {
           </div>
 
           <div className="user-menu">
+            <button
+              className="icon-button theme-toggle"
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'night' ? 'Switch to Day Mode' : 'Switch to Night Mode'}
+            >
+              {theme === 'night' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <div className="bell-wrapper">
               <button className="icon-button bell-icon" title="Notifications" onClick={() => setShowNotifications(!showNotifications)}>
                 <Bell size={20} />

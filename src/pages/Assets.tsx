@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Grid, BookOpen, Compass, RefreshCw } from "react-feather";
 import { getAllAssets } from "../services/assets";
+import "./Assets.css";
 
 type ViewState = "root" | "letter" | "results";
 
@@ -95,6 +97,41 @@ export default function Assets() {
     return assetsByLetter[selectedLetter] || [];
   }, [assetsByLetter, selectedLetter]);
 
+  const populatedBuckets = useMemo(
+    () => LETTER_BUCKETS.filter(letter => (assetsByLetter[letter] || []).length > 0).length,
+    [assetsByLetter]
+  );
+
+  const heroMetrics = useMemo(
+    () => [
+      {
+        id: "tracked",
+        label: "Tracked Assets",
+        value: assets.length,
+        detail: "Universe size",
+        icon: <Grid size={16} />,
+        positive: true
+      },
+      {
+        id: "buckets",
+        label: "Live Buckets",
+        value: populatedBuckets,
+        detail: "Letters populated",
+        icon: <BookOpen size={16} />,
+        positive: populatedBuckets > 0
+      },
+      {
+        id: "focus",
+        label: selectedLetter ? `Focused ${selectedLetter}` : "Navigator",
+        value: selectedLetter ? `${filteredAssets.length} assets` : "Select a letter",
+        detail: selectedLetter ? "Results" : "Awaiting selection",
+        icon: <Compass size={16} />,
+        positive: !!selectedLetter
+      }
+    ],
+    [assets.length, filteredAssets.length, populatedBuckets, selectedLetter]
+  );
+
   const handleAssetClick = (ticker: string) => {
     navigate(`/assets/${ticker}`);
   };
@@ -121,38 +158,86 @@ export default function Assets() {
   };
 
   if (error) {
-    return <div className="error-message">{error}</div>;
+    return (
+      <div className="assets-screen">
+        <section className="assets-hero glass-surface">
+          <div className="hero-copy">
+            <span className="eyebrow">Asset Universe</span>
+            <h1>Asset Explorer</h1>
+            <p>Navigate the tracked symbols and drill down into mission-ready dashboards.</p>
+          </div>
+        </section>
+        <div className="assets-error glass-surface">{error}</div>
+      </div>
+    );
   }
 
   return (
-    <div className="assets-page">
-      <div className="assets-header">
-        <div>
+    <div className="assets-screen">
+      <section className="assets-hero glass-surface">
+        <div className="hero-copy">
+          <span className="eyebrow">Asset Universe</span>
           <h1>Asset Explorer</h1>
-          <p className="assets-subtitle">Navigate the universe of tracked symbols with progressive filters.</p>
+          <p>Navigate the tracked symbols and drill down into mission-ready dashboards.</p>
         </div>
-        <div className="header-actions">
-          {view !== "root" && (
-            <button className="ghost-btn" onClick={view === "results" ? backToLetters : resetToRoot}>
-              ← {view === "results" ? "Back to Letters" : "Back to Options"}
-            </button>
-          )}
-          {view === "results" && selectedLetter && (
-            <button className="ghost-btn" onClick={resetToRoot}>
-              Reset
-            </button>
-          )}
+        <div className="hero-metrics">
+          {heroMetrics.map(metric => (
+            <div key={metric.id} className={`metric-chip ${metric.positive ? "positive" : ""}`}>
+              <div className="metric-icon">{metric.icon}</div>
+              <div className="metric-text">
+                <span className="metric-label">{metric.label}</span>
+                <span className="metric-value">{metric.value}</span>
+              </div>
+              <span className="metric-delta">{metric.detail}</span>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      <div className="assets-content">
-        {loading ? (
-          <div className="loading">Loading assets...</div>
-        ) : assets.length === 0 ? (
-          <div className="empty-state">No assets available.</div>
-        ) : (
-          <>
-            {view === "root" && (
+      <section className="assets-workspace">
+        <article className="assets-panel control-panel glass-surface">
+          <header className="panel-header">
+            <div>
+              <h2>
+                {view === "root"
+                  ? "Start with a navigator"
+                  : view === "letter"
+                  ? "Select a letter"
+                  : selectedLetter === "#"
+                  ? "Tickers starting with digits or symbols"
+                  : `Tickers starting with “${selectedLetter}”`}
+              </h2>
+              <p>
+                {view === "root"
+                  ? "Choose how you want to browse the inventory. Alphabetical navigator is currently live."
+                  : view === "letter"
+                  ? "Pick the first character of the ticker to focus the explorer."
+                  : `Showing ${filteredAssets.length} ${filteredAssets.length === 1 ? "asset" : "assets"}. Click a card to open detailed telemetry.`}
+              </p>
+            </div>
+            <div className="panel-actions">
+              {view !== "root" && (
+                <button className="ghost-btn" type="button" onClick={view === "results" ? backToLetters : resetToRoot}>
+                  {view === "results" ? "Back to letters" : "Back to options"}
+                </button>
+              )}
+              {view === "results" && selectedLetter && (
+                <button className="ghost-btn" type="button" onClick={resetToRoot}>
+                  Reset
+                </button>
+              )}
+            </div>
+          </header>
+
+          <div className="panel-body">
+            {loading ? (
+              <div className="loading-state">
+                <RefreshCw className="spin" size={18} />
+                <span>Loading assets…</span>
+              </div>
+            ) : assets.length === 0 ? (
+              <div className="empty-state">No assets available.</div>
+            ) : view === "root" ? (
               <div className="option-grid">
                 {OPTION_CARDS.map(option => (
                   <button
@@ -167,335 +252,102 @@ export default function Assets() {
                   </button>
                 ))}
               </div>
-            )}
-
-            {view === "letter" && (
-              <div className="letter-stage">
-                <h2>Select a letter</h2>
-                <p className="stage-helper">Choose the first letter of the ticker you want to explore.</p>
-                <div className="letter-grid">
-                  {LETTER_BUCKETS.map(letter => {
-                    const count = assetsByLetter[letter]?.length || 0;
-                    const disabled = count === 0;
-                    return (
-                      <button
-                        key={letter}
-                        className={`letter-card ${disabled ? "disabled" : ""}`}
-                        onClick={() => handleLetterSelect(letter)}
-                        disabled={disabled}
-                      >
-                        <span className="letter-label">{letter === "#" ? "#" : letter}</span>
-                        <span className="letter-count">{count} {count === 1 ? "match" : "matches"}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+            ) : view === "letter" ? (
+              <div className="letter-grid">
+                {LETTER_BUCKETS.map(letter => {
+                  const count = assetsByLetter[letter]?.length || 0;
+                  const disabled = count === 0;
+                  return (
+                    <button
+                      key={letter}
+                      className={`letter-card ${disabled ? "disabled" : ""}`}
+                      onClick={() => handleLetterSelect(letter)}
+                      disabled={disabled}
+                    >
+                      <span className="letter-label">{letter}</span>
+                      <span className="letter-count">{count} {count === 1 ? "match" : "matches"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="letter-grid compact">
+                {LETTER_BUCKETS.map(letter => {
+                  const count = assetsByLetter[letter]?.length || 0;
+                  const disabled = count === 0;
+                  const isActive = selectedLetter === letter;
+                  return (
+                    <button
+                      key={letter}
+                      className={`letter-card ${disabled ? "disabled" : ""} ${isActive ? "active" : ""}`}
+                      onClick={() => !disabled && handleLetterSelect(letter)}
+                      disabled={disabled}
+                    >
+                      <span className="letter-label">{letter}</span>
+                      <span className="letter-count">{count}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
+          </div>
+        </article>
 
-            {view === "results" && selectedLetter && (
-              <div className="results-stage">
-                <div className="results-header">
-                  <h2>
-                    {selectedLetter === "#" ? "Tickers starting with digits or symbols" : `Tickers starting with “${selectedLetter}”`}
-                  </h2>
-                  <p className="stage-helper">
-                    Showing {filteredAssets.length} {filteredAssets.length === 1 ? "asset" : "assets"}. Click a card to open the detailed dashboard.
-                  </p>
-                </div>
-                <div className="assets-grid refined">
-                  {filteredAssets.map(asset => (
-                    <div key={asset.ticker} className="asset-card refined" onClick={() => handleAssetClick(asset.ticker)}>
-                      <div className="asset-card-header">
-                        <div>
-                          <div className="asset-symbol">{asset.ticker}</div>
-                          <div className="asset-name">{asset.name || asset.ticker}</div>
-                        </div>
-                        <div className="asset-market">{asset.market || "Market N/A"}</div>
+        <article className="assets-panel results-panel glass-surface">
+          <header className="panel-header">
+            <div>
+              <h2>{view === "results" ? "Results" : "Preview"}</h2>
+              <p>
+                {view === "results"
+                  ? "Select an asset to open its detailed telemetry dashboard."
+                  : "Pick a navigator mode on the left to populate results."}
+              </p>
+            </div>
+          </header>
+
+          <div className={`panel-body ${view === "results" ? "scrollable" : ""}`}>
+            {view !== "results" || !selectedLetter ? (
+              <div className="empty-state">
+                {view === "root"
+                  ? "Navigator idle — choose an option to begin."
+                  : "No letter selected yet — use the navigator to focus a bucket."}
+              </div>
+            ) : filteredAssets.length === 0 ? (
+              <div className="empty-state">No assets found for this letter.</div>
+            ) : (
+              <div className="assets-grid refined">
+                {filteredAssets.map(asset => (
+                  <button key={asset.ticker} className="asset-card refined" onClick={() => handleAssetClick(asset.ticker)}>
+                    <div className="asset-card-header">
+                      <div>
+                        <div className="asset-symbol">{asset.ticker}</div>
+                        <div className="asset-name">{asset.name || asset.ticker}</div>
                       </div>
-                      <div className="asset-card-body">
-                        <div className="stat">
-                          <div className="stat-label">Last Price</div>
-                          <div className="stat-value">
-                            {typeof asset.lastPrice === "number" ? `$${asset.lastPrice.toFixed(2)}` : "--"}
-                          </div>
+                      <div className="asset-market">{asset.market || "Unknown market"}</div>
+                    </div>
+                    <div className="asset-card-body">
+                      <div className="stat">
+                        <div className="stat-label">Last Price</div>
+                        <div className="stat-value">
+                          {typeof asset.lastPrice === "number" ? `$${asset.lastPrice.toFixed(2)}` : "--"}
                         </div>
-                        <div className="stat">
-                          <div className="stat-label">Change</div>
-                          <div className={`stat-value ${Number(asset.priceChange) >= 0 ? "positive" : "negative"}`}>
-                            {typeof asset.priceChange === "number"
-                              ? `${asset.priceChange >= 0 ? "+" : ""}${asset.priceChange.toFixed(2)}%`
-                              : "--"}
-                          </div>
+                      </div>
+                      <div className="stat">
+                        <div className="stat-label">Change</div>
+                        <div className={`stat-value ${Number(asset.priceChange) >= 0 ? "positive" : "negative"}`}>
+                          {typeof asset.priceChange === "number"
+                            ? `${asset.priceChange >= 0 ? "+" : ""}${asset.priceChange.toFixed(2)}%`
+                            : "--"}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </button>
+                ))}
               </div>
             )}
-          </>
-        )}
-      </div>
-
-      <style>{`
-        .assets-page {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          width: 100%;
-          background: #f6f7fb;
-        }
-        .assets-header {
-          padding: 24px 32px;
-          border-bottom: 1px solid rgba(15,23,42,0.08);
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-        }
-        .assets-header h1 {
-          margin: 0;
-          font-size: 28px;
-          font-weight: 600;
-          color: var(--text);
-        }
-        .assets-subtitle {
-          margin: 6px 0 0;
-          color: var(--text-secondary);
-          font-size: 14px;
-        }
-        .header-actions {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-        .ghost-btn {
-          background: rgba(15,23,42,0.04);
-          border: 1px solid rgba(15,23,42,0.08);
-          border-radius: 8px;
-          padding: 8px 14px;
-          font-size: 13px;
-          color: var(--text);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .ghost-btn:hover {
-          background: rgba(15,23,42,0.08);
-        }
-        .assets-content {
-          padding: 28px 32px;
-          flex: 1;
-          overflow: auto;
-        }
-        .loading, .empty-state {
-          padding: 48px;
-          color: var(--text-secondary);
-          text-align: center;
-          font-size: 15px;
-        }
-        .error-message {
-          color: var(--danger);
-          padding: 32px;
-          text-align: center;
-          font-size: 15px;
-        }
-        .option-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 24px;
-        }
-        .option-card {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          text-align: left;
-          background: linear-gradient(145deg, #ffffff, #f1f5ff);
-          border-radius: 16px;
-          border: 1px solid rgba(15,23,42,0.08);
-          padding: 20px;
-          box-shadow: 0 12px 24px -14px rgba(15,23,42,0.45);
-          cursor: pointer;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-          position: relative;
-        }
-        .option-card:not(.disabled):hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 32px -18px rgba(15,23,42,0.55);
-        }
-        .option-card.disabled {
-          cursor: not-allowed;
-          opacity: 0.6;
-          box-shadow: none;
-        }
-        .option-card-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text);
-          margin-bottom: 8px;
-        }
-        .option-card-description {
-          font-size: 13px;
-          color: var(--text-secondary);
-          line-height: 1.5;
-        }
-        .soon-tag {
-          position: absolute;
-          top: 14px;
-          right: 16px;
-          background: rgba(15,23,42,0.08);
-          color: var(--text-secondary);
-          border-radius: 999px;
-          padding: 4px 10px;
-          font-size: 11px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .letter-stage h2 {
-          margin: 0;
-          font-size: 22px;
-          font-weight: 600;
-          color: var(--text);
-        }
-        .stage-helper {
-          margin: 6px 0 24px;
-          color: var(--text-secondary);
-          font-size: 13px;
-        }
-        .letter-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
-          gap: 16px;
-        }
-        .letter-card {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 18px 12px;
-          border-radius: 14px;
-          border: 1px solid rgba(15,23,42,0.12);
-          background: #ffffff;
-          box-shadow: 0 10px 18px -14px rgba(15,23,42,0.5);
-          font-size: 15px;
-          font-weight: 600;
-          color: var(--text);
-          cursor: pointer;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .letter-card:not(.disabled):hover {
-          transform: translateY(-3px);
-          box-shadow: 0 18px 26px -16px rgba(15,23,42,0.55);
-        }
-        .letter-card.disabled {
-          cursor: not-allowed;
-          opacity: 0.45;
-          box-shadow: none;
-        }
-        .letter-label {
-          font-size: 20px;
-          font-weight: 700;
-        }
-        .letter-count {
-          font-size: 11px;
-          letter-spacing: 0.04em;
-          color: var(--text-secondary);
-        }
-        .results-stage {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-        .results-header h2 {
-          margin: 0;
-          font-size: 24px;
-          font-weight: 600;
-          color: var(--text);
-        }
-        .assets-grid.refined {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 24px;
-        }
-        .asset-card.refined {
-          background: linear-gradient(155deg, #ffffff, #eef2ff);
-          border-radius: 18px;
-          padding: 20px;
-          border: 1px solid rgba(79,70,229,0.18);
-          box-shadow: 0 24px 40px -24px rgba(79,70,229,0.45);
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
-        }
-        .asset-card.refined:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 28px 48px -22px rgba(79,70,229,0.55);
-        }
-        .asset-card-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-        .asset-symbol {
-          font-weight: 700;
-          font-size: 20px;
-          color: var(--text);
-        }
-        .asset-name {
-          color: var(--text-secondary);
-          font-size: 13px;
-          margin-top: 6px;
-        }
-        .asset-market {
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          color: rgba(79,70,229,0.8);
-          background: rgba(79,70,229,0.12);
-          border-radius: 999px;
-          padding: 4px 10px;
-        }
-        .asset-card-body {
-          display: flex;
-          gap: 28px;
-          justify-content: flex-start;
-        }
-        .stat {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .stat-label {
-          color: var(--text-secondary);
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
-        .stat-value {
-          font-weight: 600;
-          font-size: 16px;
-        }
-        .positive { color: #0f9d58; }
-        .negative { color: #d93025; }
-
-        @media (max-width: 768px) {
-          .assets-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          .header-actions {
-            width: 100%;
-          }
-          .letter-grid {
-            grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-          }
-          .assets-grid.refined {
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          }
-        }
-      `}</style>
+          </div>
+        </article>
+      </section>
     </div>
   );
 }
