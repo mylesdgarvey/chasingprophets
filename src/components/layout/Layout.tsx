@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { BarChart2, Database, Settings, Search, LogOut, Bell } from 'react-feather';
+import { BarChart2, Database, Settings, Search, LogOut, Bell, Moon, Sun } from 'react-feather';
 import NotificationPopup from '../notifications/NotificationPopup';
 import SearchBox from '../controls/SearchBox';
 import { getUnreadCountForUser } from '../../services/notifications';
+import { useTheme } from '../../context/ThemeContext';
 import './Layout.css';
 
 const Layout: React.FC = () => {
@@ -14,6 +15,7 @@ const Layout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { theme, toggleTheme } = useTheme();
   // bell will be inline in the header; popup is positioned relative to the bell wrapper
 
   async function refreshUnreadCount() {
@@ -57,7 +59,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="layout">
+    <div className={`layout ${theme === 'day' ? 'theme-day' : 'theme-night'}`}>
       <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="logo" onClick={toggleSidebar}>
           <img src="/logo.svg" alt="ChasingProphets" />
@@ -109,6 +111,13 @@ const Layout: React.FC = () => {
           </div>
 
           <div className="user-menu">
+            <button
+              className="icon-button theme-toggle"
+              onClick={toggleTheme}
+              title={theme === 'day' ? 'Switch to night mode' : 'Switch to day mode'}
+            >
+              {theme === 'day' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
             <div className="bell-wrapper">
               <button className="icon-button bell-icon" title="Notifications" onClick={() => setShowNotifications(!showNotifications)}>
                 <Bell size={20} />

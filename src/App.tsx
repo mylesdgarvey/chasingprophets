@@ -8,12 +8,15 @@ import Settings from "./pages/Settings";
 import LoginPage from "./pages/auth/LoginPage";
 import Layout from "./components/layout/Layout";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
