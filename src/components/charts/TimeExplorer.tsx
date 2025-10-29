@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 // @ts-ignore
 import Plotly from 'plotly.js-dist-min';
 import { PriceData } from '../../types/price';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TimeExplorerProps {
   prices: PriceData[];
@@ -46,6 +47,7 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
   const [selectedMonth, setSelectedMonth] = useState<number>(0);
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
   const [hiddenYears, setHiddenYears] = useState<number[]>([]);
+  const { theme } = useTheme();
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -139,24 +141,32 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
       return;
     }
 
+    const isDayTheme = theme === 'day';
+    const textColor = isDayTheme ? '#1e293b' : '#dce7ff';
+    const gridColor = isDayTheme ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.1)';
+    const zerolineColor = isDayTheme ? 'rgba(15,23,42,0.2)' : 'rgba(255,255,255,0.2)';
+
     const expectedLength = windowLengths[windowType];
     const layout = {
       height,
       margin: { t: 110, r: 10, l: 60, b: 40 },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: textColor },
       hovermode: 'x unified' as const,
       showlegend: false,
       xaxis: {
-        title: { text: 'Day' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)',
-        range: [0.5, expectedLength + 0.5]
+        title: { text: 'Day', font: { color: textColor } },
+        gridcolor: gridColor,
+        zerolinecolor: zerolineColor,
+        range: [0.5, expectedLength + 0.5],
+        color: textColor
       },
       yaxis: {
-        title: { text: '% Change from First Day' },
-        gridcolor: 'rgba(0,0,0,0.1)',
-        zerolinecolor: 'rgba(0,0,0,0.2)'
+        title: { text: '% Change from First Day', font: { color: textColor } },
+        gridcolor: gridColor,
+        zerolinecolor: zerolineColor,
+        color: textColor
       }
     };
 
@@ -167,7 +177,7 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
         Plotly.purge(chartRef.current);
       }
     };
-  }, [chartData, height, windowType]);
+  }, [chartData, height, windowType, theme]);
 
   useEffect(() => {
     setHiddenYears([]);
