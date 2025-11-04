@@ -41,14 +41,19 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
   const plotlyTheme = usePlotlyTheme();
   const [windowType, setWindowType] = useState<Window>('week');
   const [measure, setMeasure] = useState<Measure>('close');
-  const [selectedWeek, setSelectedWeek] = useState<number>(1);
-  const [selectedMonth, setSelectedMonth] = useState<number>(0);
-  const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
+  
+  // Get current week, month, and quarter
+  const now = useMemo(() => new Date(), []);
+  const currentWeek = useMemo(() => getISOWeekNumber(now), [now]);
+  const currentMonth = useMemo(() => now.getMonth(), [now]);
+  const currentQuarter = useMemo(() => getQuarterFromMonth(now.getMonth()), [now]);
+  
+  const [selectedWeek, setSelectedWeek] = useState<number>(currentWeek);
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [selectedQuarter, setSelectedQuarter] = useState<number>(currentQuarter);
   const [hiddenYears, setHiddenYears] = useState<number[]>([]);
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const now = useMemo(() => new Date(), []);
 
   const filteredPrices = useMemo(() => {
     return prices.filter(price => new Date(price.date) <= now);
@@ -154,12 +159,68 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
     }
 
     const expectedLength = windowLengths[windowType];
+    
+    // Create annotations for year labels on the lines
+    const annotations = chartData.flatMap((trace, idx) => {
+      const yValues = trace.y as (number | null)[];
+      const labels = [];
+      
+      // Find the first non-null value for start label
+      let firstValidIndex = 0;
+      while (firstValidIndex < yValues.length && yValues[firstValidIndex] === null) {
+        firstValidIndex++;
+      }
+      
+      if (firstValidIndex < yValues.length && yValues[firstValidIndex] !== null) {
+        labels.push({
+          x: firstValidIndex + 1,
+          y: yValues[firstValidIndex] as number,
+          xref: 'x' as const,
+          yref: 'y' as const,
+          text: trace.name,
+          showarrow: false,
+          font: {
+            size: 10,
+            color: trace.line?.color || plotlyTheme.font.color
+          },
+          xanchor: 'right' as const,
+          xshift: -5
+        });
+      }
+      
+      // Find the last non-null value for end label
+      let lastValidIndex = yValues.length - 1;
+      while (lastValidIndex >= 0 && yValues[lastValidIndex] === null) {
+        lastValidIndex--;
+      }
+      
+      if (lastValidIndex >= 0 && yValues[lastValidIndex] !== null) {
+        labels.push({
+          x: lastValidIndex + 1,
+          y: yValues[lastValidIndex] as number,
+          xref: 'x' as const,
+          yref: 'y' as const,
+          text: trace.name,
+          showarrow: false,
+          font: {
+            size: 10,
+            color: trace.line?.color || plotlyTheme.font.color
+          },
+          xanchor: 'left' as const,
+          xshift: 5
+        });
+      }
+      
+      return labels;
+    });
+    
     const layout = {
       height,
-      margin: { t: 110, r: 10, l: 60, b: 40 },
+      margin: { t: 110, r: 60, l: 80, b: 40 },
       ...plotlyTheme,
       hovermode: 'x unified' as const,
       showlegend: false,
+      annotations,
       xaxis: {
         title: { text: 'Day', font: { color: plotlyTheme.font.color } },
         ...plotlyTheme.xaxis,
@@ -183,6 +244,17 @@ export default function TimeExplorer({ prices, height = 400 }: TimeExplorerProps
   useEffect(() => {
     setHiddenYears([]);
   }, [prices]);
+
+  // Reset to current period when window type changes
+  useEffect(() => {
+    if (windowType === 'week') {
+      setSelectedWeek(currentWeek);
+    } else if (windowType === 'month') {
+      setSelectedMonth(currentMonth);
+    } else if (windowType === 'quarter') {
+      setSelectedQuarter(currentQuarter);
+    }
+  }, [windowType, currentWeek, currentMonth, currentQuarter]);
 
   const legendEntries = useMemo(() => {
     const totalYears = yearBuckets.length;
