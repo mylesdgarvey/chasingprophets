@@ -1,0 +1,13 @@
+{
+  "parameters": {
+    "slope": 1.996969696969697,
+    "intercept": 0.026666666666665506,
+    "input_field": "x",
+    "output_field": "y"
+  },
+  "data": [
+    {"x": 11},
+    {"x": 12},
+    {"x": 13}
+  ]
+}

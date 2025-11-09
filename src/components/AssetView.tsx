@@ -4,6 +4,7 @@ import { PriceData } from '../types/price';
 import { Data } from 'plotly.js';
 import StockChart from './chart/StockChart';
 import { ProphetControls } from './ProphetControls';
+import ModelFitManager from './ModelFitManager';
 import './AssetView.css';
 
 // Technical indicators
@@ -209,6 +210,9 @@ export default function AssetView({ ticker }: AssetViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Model Fit Management Section */}
+      <ModelFitManager assetId={ticker} />
     </div>
   );
 }

@@ -179,11 +179,13 @@
 }
 
 /* Chart Containers */
-.chart-container {
-  min-height: 380px;
-  background: var(--bg-chart-panel);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-4);
+.asset-chart-section {
+  background: var(--bg-panel);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  min-height: 400px;
 }
 
 .plotly-chart {

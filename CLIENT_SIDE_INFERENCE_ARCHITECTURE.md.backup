@@ -1,0 +1,466 @@
+# Dual Inference Architecture
+
+## Overview
+
+**CRITICAL**: Prophets use **DUAL INFERENCE** - both server-side AND client-side execution of the same inference logic:
+
+1. **Server-Side Inference** (Daily Automated Updates)
+   - AWS EventBridge cron → Lambda function
+   - Updates `Prophet.performance` metrics in DynamoDB
+   - Runs daily for all active prophets
+
+2. **Client-Side Inference** (User Visualization)
+   - Browser JavaScript execution
+   - Downloads same scripts/parameters from S3
+   - Generates interactive visualizations
+   - Runs on-demand when user visits prophet page
+
+**Both use identical transformation scripts and model parameters** - server stores metrics, client renders charts.
+
+---
+
+## 🔄 Server-Side Inference (Daily Cron Job)
+
+### Purpose
+Keep prophet performance metrics up-to-date with latest data.
+
+### Trigger
+AWS EventBridge cron schedule (daily at midnight UTC)
+
+### Execution Flow
+
+### Execution Flow
+
+```typescript
+// Lambda function (runs daily)
+async function updateProphetPerformanceDaily() {
+  // 1. Get all active prophets
+  const prophets = await getActiveProphets(); // status = 'active'
+  
+  // 2. Process each prophet
+  for (const prophet of prophets) {
+    try {
+      // 3. Fetch latest asset data (e.g., last 30 days)
+      const inputData = await fetchLatestAssetData(prophet.assetId, 30);
+      
+      // 4. Download inference components from S3
+      const modelFit = await getModelFit(prophet.modelFitId);
+      const parameters = await downloadS3(modelFit.s3ParametersPath);
+      const inferenceScript = await downloadS3(modelFit.s3LocalInferenceScriptPath);
+      const inputTransform = prophet.s3InputTransformScriptPath 
+        ? await downloadS3(prophet.s3InputTransformScriptPath)
+        : null;
+      const outputTransform = await downloadS3(prophet.s3OutputTransformScriptPath);
+      
+      // 5. Execute inference pipeline
+      const transformedInput = inputTransform 
+        ? await inputTransform(inputData)
+        : inputData;
+      const modelOutput = inferenceScript.predict(transformedInput, parameters);
+      const predictions = await outputTransform(modelOutput, {
+        lastActualPrice: inputData[inputData.length - 1].close
+      });
+      
+      // 6. Calculate performance metrics
+      const actual = inputData.slice(1).map(d => d[prophet.targetProperty]);
+      const metrics = {
+        rmse: calculateRMSE(actual, predictions),
+        mape: calculateMAPE(actual, predictions),
+        r2: calculateR2(actual, predictions),
+        directionalAccuracy: calculateDirectionalAccuracy(actual, predictions),
+        backtestPeriod: {
+          start: inputData[0].date,
+          end: inputData[inputData.length - 1].date
+        }
+      };
+      
+      // 7. Update DynamoDB
+      await updateProphetPerformance(prophet.prophetId, metrics);
+      
+      console.log(`✅ Updated ${prophet.prophetName}: RMSE=${metrics.rmse}`);
+    } catch (error) {
+      console.error(`❌ Failed to update ${prophet.prophetName}:`, error);
+      // Continue with next prophet
+    }
+  }
+}
+```
+
+### Result
+- Prophet records in DynamoDB have fresh `performance` metrics
+- Users see current accuracy/RMSE when browsing prophets
+- No user interaction required
+
+---
+
+## 👁️ Client-Side Inference (User Visualization)
+
+### Purpose
+Show users interactive visualizations of prophet predictions.
+
+### Trigger
+User navigates to:
+- Individual Prophet page
+- Individual Model Fit page
+
+### Execution Flow (Browser)
+
+#### 1. Download Phase (from S3)
+Convert raw asset data to model's expected input format:
+
+```javascript
+// Example: DJIA last 31 days of close prices → lagged 1-day % returns
+// Input: [38000, 38100, 38050, ...]  (31 days of close prices)
+// Output: [0.0026, -0.0013, ...]     (30 lagged 1-day returns)
+
+// input_transform.js (executed in browser)
+async function input_transform(rawData, context) {
+  const prices = rawData.map(d => d.close);
+  const returns = [];
+  
+  for (let i = 1; i < prices.length; i++) {
+    const ret = (prices[i] - prices[i-1]) / prices[i-1];
+    returns.push({ x: ret }); // Model expects {x: value}
+  }
+  
+  return returns;
+}
+```
+
+### 3. Model Inference (Browser-Side)
+Execute the model locally using downloaded parameters:
+
+```javascript
+// Example: SLR with downloaded parameters
+// inference.js (from scaffold)
+function predict(data, parameters) {
+  const { slope, intercept, input_field = 'x' } = parameters;
+  
+  return data.map(row => {
+    const x = row[input_field];
+    const y_pred = slope * x + intercept;
+    return { ...row, y_pred };
+  });
+}
+
+// Client executes:
+const modelPredictions = predict(transformedInput, modelParameters);
+// Output: [{x: 0.0026, y_pred: 0.0019}, {x: -0.0013, y_pred: -0.0008}, ...]
+```
+
+### 4. Output Transformation (Required)
+Convert model's output back to asset's measurement units:
+
+```javascript
+// Example: % returns → predicted DJIA close prices
+// output_transform.js (executed in browser)
+async function output_transform(predictions, context) {
+  const { lastActualPrice = 38050 } = context;
+  const prices = [lastActualPrice];
+  
+  // Convert each predicted return to predicted price
+  predictions.forEach(pred => {
+    const nextPrice = prices[prices.length - 1] * (1 + pred.y_pred);
+    prices.push(nextPrice);
+  });
+  
+  return prices.slice(1); // Remove initial price
+  // Output: [38122, 38092, ...]  (predicted DJIA close prices)
+}
+```
+
+### 5. Visualization
+Plot actual vs. predicted prices on client:
+
+```typescript
+// Client-side plotting
+const actualPrices = rawData.map(d => d.close);
+const predictedPrices = await executeProphet(prophetId, rawData);
+
+plotChart({
+  actual: actualPrices,
+  predicted: predictedPrices,
+  dates: rawData.map(d => d.date)
+});
+```
+
+## Complete Example: DJIA SLR Prophet
+
+### Scenario
+- **Asset**: DJIA
+- **Model**: Simple Linear Regression (SLR)
+- **Input**: Lagged 1-day close-to-close % return
+- **Output**: Current day's close-to-close % return
+- **Forecast Method**: Direct (simple prediction)
+- **Target Property**: `close` (DJIA closing price)
+
+### Data Flow
+
+```
+Raw Asset Data (31 days):
+┌─────────────┬────────┐
+│ Date        │ Close  │
+├─────────────┼────────┤
+│ 2024-11-01  │ 38000  │
+│ 2024-11-02  │ 38100  │ → Input Transform
+│ 2024-11-03  │ 38050  │
+│ ...         │ ...    │
+│ 2024-12-01  │ 38200  │
+└─────────────┴────────┘
+
+Input Transform (prices → % returns):
+┌────────┬────────┐
+│ x_lag  │ y      │  (model's contract)
+├────────┼────────┤
+│ 0.0026 │ -0.0013│
+│ -0.0013│ 0.0021 │ → Model Inference
+│ 0.0021 │ 0.0005 │
+│ ...    │ ...    │
+└────────┴────────┘
+
+Model Predictions (% returns):
+┌────────┬────────┐
+│ x_lag  │ y_pred │
+├────────┼────────┤
+│ 0.0026 │ 0.0019 │
+│ -0.0013│ -0.0008│ → Output Transform
+│ 0.0021 │ 0.0012 │
+│ ...    │ ...    │
+└────────┴────────┘
+
+Output Transform (% returns → prices):
+┌─────────────┬────────┬───────────┐
+│ Date        │ Actual │ Predicted │
+├─────────────┼────────┼───────────┤
+│ 2024-11-02  │ 38100  │ 38072     │
+│ 2024-11-03  │ 38050  │ 38042     │ → Plot
+│ 2024-11-04  │ 38130  │ 38088     │
+│ ...         │ ...    │ ...       │
+└─────────────┴────────┴───────────┘
+```
+
+## Prophet Components
+
+### Prophet Record (DynamoDB)
+```typescript
+{
+  prophetId: "abc-123",
+  prophetName: "SLR-DJIA-2024-11-01",
+  assetId: "DJIA",
+  modelFitId: "SLR_DJIA_30d_2024-11-01",
+  
+  // What we're forecasting
+  targetProperty: "close",  // Predicting DJIA close prices
+  
+  // Transformation scripts (S3 paths)
+  s3InputTransformScriptPath: "s3://.../scripts/prophets/abc-123/input_transform.js",
+  s3OutputTransformScriptPath: "s3://.../scripts/prophets/abc-123/output_transform.js",
+  
+  // How to forecast
+  forecastMethod: "direct",  // simple | stochastic | confidence_interval
+  forecastParams: null,      // {seed, distribution} for stochastic
+  
+  // Status
+  status: "active",          // pending_training | active | inactive | failed
+  
+  // Performance (measured on asset's actual values)
+  performance: {
+    rmse: 45.2,              // Root mean squared error (in price units)
+    mape: 0.012,             // Mean absolute percentage error
+    r2: 0.85,                // R-squared
+    directionalAccuracy: 0.72, // % of correct up/down predictions
+    backtestPeriod: {
+      start: "2024-01-01",
+      end: "2024-10-31"
+    }
+  }
+}
+```
+
+### ModelFit Record (DynamoDB)
+```typescript
+{
+  modelFitId: "SLR_DJIA_30d_2024-11-01",
+  scaffoldId: "SLR",
+  dataSliceId: "DJIA_30d_2024-11-01",
+  assetId: "DJIA",
+  
+  // Where the trained parameters live
+  s3ParametersPath: "s3://.../models/SLR_DJIA_30d_2024-11-01/parameters.json",
+  
+  // Local inference script (browser-side)
+  s3LocalInferenceScriptPath: "s3://.../scripts/scaffolds/SLR/inference.js",
+  
+  // Model's input/output contract
+  inputContract: {
+    expectedColumns: ["x"],
+    dataTypes: { x: "float64" },
+    preprocessing: "lag_1_day_return"
+  },
+  outputContract: {
+    outputColumns: ["y_pred"],
+    outputTypes: { y_pred: "float64" },
+    outputDescription: "next_day_return_prediction"
+  },
+  
+  status: "fit",  // unfit | training | fit | failed
+  metrics: {
+    train_r2: 0.82,
+    train_rmse: 0.0045  // In return units, not price units
+  }
+}
+```
+
+### parameters.json (S3)
+```json
+{
+  "model_type": "simple_linear_regression",
+  "slope": 0.73,
+  "intercept": 0.00012,
+  "input_field": "x",
+  "output_field": "y",
+  "training_metadata": {
+    "n_samples": 29,
+    "train_r2": 0.82,
+    "train_rmse": 0.0045
+  }
+}
+```
+
+## Key Insights
+
+### 1. NO Server-Side Inference
+- ❌ NO Lambda calls during inference
+- ❌ NO prediction API endpoints
+- ✅ Everything downloads to browser
+- ✅ Fast, local execution
+- ✅ No server costs for inference
+
+### 2. Transformation Scripts = JavaScript
+- **Input Transform**: `input_transform.js` (CommonJS module)
+  - Converts raw asset data → model's input format
+  - Optional (can be identity function)
+  - Example: Prices → % returns, or add technical indicators
+  
+- **Output Transform**: `output_transform.js` (CommonJS module)
+  - Converts model's output → asset's measurement units
+  - **Required** (always needed to interpret results)
+  - Example: % returns → predicted prices
+
+### 3. Model Inference = Pure JavaScript
+- Each scaffold has `inference.js` (e.g., SLR, MLR)
+- Simple functions: `predict(data, parameters)`
+- No dependencies, runs in any browser
+- Fast enough for interactive visualization
+
+### 4. Performance Metrics = Asset Units
+- Prophet's performance measured on **actual asset values**
+- Example: RMSE = 45.2 **dollars** (not 0.0045 returns)
+- This is what users care about: "How accurate are my price predictions?"
+- Model's internal metrics (in return units) are separate
+
+### 5. Forecast Methods
+- **Direct**: Simple prediction passthrough
+- **Stochastic**: Add random error for uncertainty (future)
+- **Confidence Interval**: Show prediction bands (future)
+
+## Client-Side Inference Engine (To Build)
+
+```typescript
+// src/utils/prophetInference.ts
+
+interface InferenceResult {
+  predictions: number[];
+  actual: number[];
+  dates: string[];
+  metrics: {
+    rmse: number;
+    mape: number;
+    directionalAccuracy: number;
+  };
+}
+
+async function executeProphet(
+  prophetId: string,
+  inputData: Array<{date: string, close: number, ...}>,
+  context?: Record<string, any>
+): Promise<InferenceResult> {
+  
+  // 1. Fetch prophet metadata
+  const prophet = await getProphet(prophetId);
+  const modelFit = await getModelFit(prophet.modelFitId);
+  
+  // 2. Download from S3
+  const parameters = await downloadS3Json(modelFit.s3ParametersPath);
+  const inferenceScript = await downloadS3Script(modelFit.s3LocalInferenceScriptPath);
+  const outputTransform = await downloadS3Script(prophet.s3OutputTransformScriptPath);
+  const inputTransform = prophet.s3InputTransformScriptPath 
+    ? await downloadS3Script(prophet.s3InputTransformScriptPath)
+    : null;
+  
+  // 3. Execute input transform (if exists)
+  const modelInput = inputTransform 
+    ? await inputTransform(inputData, context)
+    : inputData;
+  
+  // 4. Run model inference
+  const modelOutput = inferenceScript.predict(modelInput, parameters);
+  
+  // 5. Execute output transform
+  const predictions = await outputTransform(modelOutput, {
+    ...context,
+    lastActualPrice: inputData[inputData.length - 1].close
+  });
+  
+  // 6. Calculate metrics
+  const actual = inputData.slice(1).map(d => d[prophet.targetProperty]);
+  const metrics = calculateMetrics(actual, predictions);
+  
+  return {
+    predictions,
+    actual,
+    dates: inputData.slice(1).map(d => d.date),
+    metrics
+  };
+}
+```
+
+## Why This Architecture?
+
+### Advantages
+1. **Fast**: No network round trips during inference
+2. **Cheap**: No Lambda costs for predictions
+3. **Scalable**: Unlimited concurrent users (client CPU)
+4. **Transparent**: Users can inspect transformation logic
+5. **Flexible**: Easy to customize transforms per prophet
+6. **Interactive**: Real-time updates as user explores data
+
+### Trade-offs
+1. **Download overhead**: Must download scripts + parameters (small, one-time)
+2. **Browser limits**: Very large models may be slow (not an issue for SLR/MLR)
+3. **Security**: Code visible to users (acceptable for this use case)
+
+## Next Steps
+
+1. ✅ Prophet schema updated with `s3InputTransformScriptPath`, `s3OutputTransformScriptPath`
+2. ✅ Orchestrator generates and uploads default `output_transform.js`
+3. ✅ 374 prophets regenerated with new schema + S3 scripts
+4. ⏳ Update `prophet.ts` service to handle new schema
+5. ⏳ Build client-side inference engine (`prophetInference.ts`)
+6. ⏳ Create Prophets page with transform editor + live inference demo
+7. ⏳ Train models (upload `parameters.json` to S3)
+8. ⏳ E2E test: Download → Transform → Infer → Plot
+
+## Example Use Cases
+
+### Use Case 1: Simple Backtesting
+User selects a prophet → Client downloads everything → Runs inference on historical data → Plots actual vs. predicted → Shows RMSE, directional accuracy
+
+### Use Case 2: Live Forecasting
+User provides last 30 days of prices → Prophet runs inference → Shows next day's predicted price → User can adjust input transform logic → Re-run instantly
+
+### Use Case 3: Prophet Comparison
+User selects multiple prophets → Run all in parallel (browser-side) → Compare predictions side-by-side → Pick best performer
+
+### Use Case 4: Custom Transforms
+User edits `output_transform.js` in browser → Adds custom logic (e.g., smoothing) → Re-run inference → See updated predictions immediately

@@ -22,8 +22,8 @@
   transition: background var(--transition-fast);
 }
 
-.accordion-header:hover {
-  background: var(--hover-color);
+.prophet-header:hover {
+  background: var(--bg-hover);
 }
 
 .header-content {
@@ -49,7 +49,7 @@
 
 .accordion-content {
   border-top: 1px solid var(--border-color);
-  background: var(--background-color);
+  background: var(--bg-secondary);
   padding: var(--spacing-6);
 }
 
@@ -142,5 +142,5 @@
 }
 
 .button-primary:hover {
-  background: var(--accent-hover);
+  background: var(--primary-dark);
 }

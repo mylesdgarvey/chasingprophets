@@ -23,7 +23,7 @@
 }
 
 .prophet-header:hover {
-  background: var(--hover-color);
+  background: var(--bg-hover);
 }
 
 .prophet-title {
@@ -37,7 +37,7 @@
 .prophet-content {
   border-top: 1px solid var(--border-color);
   padding: var(--spacing-4);
-  background: var(--background-color);
+  background: var(--bg-secondary);
 }
 
 /* Prophet Controls */
@@ -103,7 +103,7 @@
 }
 
 .prophet-option:not(.active):hover {
-  background: var(--hover-color);
+  background: var(--bg-hover);
 }
 
 .prophet-option.active {
@@ -171,8 +171,8 @@
 }
 
 .time-window-option:not(.active):hover {
-  background: var(--hover-color);
-  color: var(--text-primary);
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 .time-window-option.active {
@@ -186,7 +186,7 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-1);
-  background: var(--hover-color);
+  background: var(--bg-hover);
   border-radius: 6px;
 }
 

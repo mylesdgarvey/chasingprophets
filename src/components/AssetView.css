@@ -17,7 +17,7 @@
   padding: 32px;
   background: var(--bg-panel);
   border-radius: 12px;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
   width: 100%;
   box-sizing: border-box;
@@ -89,45 +89,16 @@
   grid-auto-rows: auto;
 }
 
-/* Theme-aware metric cards */
-.theme-night .metric-card {
-  background: var(--bg-metric-card);
+.metric-card {
+  background: var(--bg-panel);
   padding: 20px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
-  height: auto;
-  box-sizing: border-box;
-  overflow: hidden;
-  align-self: stretch;
   min-height: 120px;
-  isolation: isolate;
-  will-change: transform;
-  min-width: 0;
-}
-
-.theme-day .metric-card {
-  background: var(--bg-metric-card);
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--box-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  height: auto;
-  box-sizing: border-box;
-  overflow: hidden;
-  align-self: stretch;
-  min-height: 120px;
-  isolation: isolate;
-  will-change: transform;
-  min-width: 0;
 }
 
 .metric-label {
@@ -168,10 +139,10 @@
 }
 
 .chart-section {
-  background: var(--bg-chart-panel);
+  background: var(--bg-panel);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
   min-height: 400px;
 }
@@ -186,7 +157,7 @@
   background: var(--bg-panel);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
 }
 
@@ -237,7 +208,7 @@
   height: 200px;
   background: var(--bg-panel);
   border-radius: 12px;
-  box-shadow: var(--box-shadow);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
   color: var(--text-secondary);
   font-size: 16px;
@@ -261,11 +232,6 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 24px;
   }
-  
-  .metric-card {
-    /* Increase height for better visual balance in 2x2 */
-    min-height: 160px;
-  }
 }
 
 /* Stack on mobile but maintain proper spacing */
@@ -288,11 +254,6 @@
   .market-metrics {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .metric-card {
-    padding: 20px;
-    min-height: auto;
   }
 
   .current-price {
