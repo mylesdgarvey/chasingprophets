@@ -1,30 +1,23 @@
 /**
- * Simple Linear Regression - Client-Side Inference
- * 
- * Predicts: y = mx + b
- * 
- * Input format: { date, open, high, low, close, volume, ... }
- * Returns: predicted close price
+ * Simple Linear Regression - Local Inference Script
+ * Performs prediction using trained SLR model parameters.
+ * Used for client-side visualization in the browser.
  */
 
-function predict(parameters, input) {
-  const { slope, intercept, input_field, output_field } = parameters;
+function predict(input, parameters) {
+  const { slope, intercept, input_field = 'close', output_field = 'close' } = parameters;
   
-  // Get the input value (typically 'close' price)
-  const x = input[input_field];
-  
-  if (x === undefined || x === null || isNaN(x)) {
-    console.error(`Invalid input value for field '${input_field}':`, x, 'Full input:', input);
-    return null;
+  // Validate parameters
+  if (typeof slope !== 'number' || typeof intercept !== 'number') {
+    throw new Error('Invalid parameters: slope and intercept must be numbers');
   }
   
-  const prediction = slope * x + intercept;
-  return prediction;
-}
-
-function batchPredict(parameters, inputs) {
-  return inputs.map(input => ({
-    ...input,
-    prediction: predict(parameters, input)
-  }));
+  // Get input value
+  const x = input[input_field];
+  if (typeof x !== 'number' || isNaN(x)) {
+    throw new Error(`Invalid input value for field '${input_field}': ${x}`);
+  }
+  
+  // Simple linear regression: y = mx + b
+  return slope * x + intercept;
 }
