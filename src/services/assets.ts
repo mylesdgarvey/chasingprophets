@@ -220,18 +220,28 @@ export async function getAssetPrices(
   try {
     if (!ddb) throw new Error('DynamoDB client not initialized');
     
+    // Map Yahoo Finance tickers to our asset IDs
+    const tickerToAssetId: Record<string, string> = {
+      '^DJI': 'DJIA',
+      '^GSPC': 'SPX',
+      'DJIA': 'DJIA',
+      'SPX': 'SPX'
+    };
+    
+    const assetId = tickerToAssetId[ticker] || ticker;
+    
     // Step 1: Find the dataset for this ticker using scan (AssetIndex may not exist)
     const datasetCommand = new ScanCommand({
       TableName: TABLES.DATASETS,
       FilterExpression: 'assetId = :assetId',
-      ExpressionAttributeValues: { ':assetId': ticker }
+      ExpressionAttributeValues: { ':assetId': assetId }
     });
     
     const datasetResponse = await ddb.send(datasetCommand);
     const dataset = datasetResponse.Items?.[0];
     
     if (!dataset?.source) {
-      console.warn(`No dataset found for ticker ${ticker}`);
+      console.warn(`No dataset found for ticker ${ticker} (mapped to ${assetId})`);
       
       // Debug: List all datasets to see what's available
       const allDatasetsCommand = new ScanCommand({

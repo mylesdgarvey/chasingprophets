@@ -33,9 +33,12 @@ export interface ProphetPerformanceSummary {
   prophetId: string;
   aggregationWindow: string;  // e.g., "20-day", "240-day" (sort key)
   mape: number;               // Mean Absolute Percentage Error
+  rmse: number;               // Root Mean Squared Error
+  r2: number;                 // R-squared
+  directionalAccuracy: number; // Percentage of correct direction predictions
+  sampleSize: number;         // Number of predictions in window
   percentileError75?: number;
   percentileError90?: number;
-  directionalAccuracy?: number;
   lastUpdated: string;
 }
 

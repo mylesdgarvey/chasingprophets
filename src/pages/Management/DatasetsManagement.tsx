@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Edit2, Trash2, Plus, Search, Database } from 'lucide-react';
 import { getAllDatasets, deleteDataset } from '../../services/dataset';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import DatasetFormModal from '../../components/modals/DatasetFormModal';
 import type { Dataset } from '../../types/dataset';
 import './Management.css';
@@ -164,21 +165,21 @@ export default function DatasetsManagement() {
               filteredDatasets.map(dataset => (
                 <tr key={dataset.datasetId}>
                   <td>
-                    <span className="monospace">{dataset.datasetId}</span>
+                    <EntityBadge
+                      type="dataset"
+                      id={dataset.datasetId}
+                      label={dataset.datasetId}
+                      size="small"
+                    />
                   </td>
                   <td>{dataset.name}</td>
                   <td>
-                    <span 
-                      style={{ 
-                        background: 'var(--bg-tertiary)', 
-                        padding: '0.25rem 0.5rem', 
-                        borderRadius: '4px',
-                        fontSize: '0.8em',
-                        fontWeight: 500
-                      }}
-                    >
-                      {dataset.assetId}
-                    </span>
+                    <EntityBadge
+                      type="asset"
+                      id={dataset.assetId}
+                      label={dataset.assetId}
+                      size="small"
+                    />
                   </td>
                   <td>
                     <div style={{ 

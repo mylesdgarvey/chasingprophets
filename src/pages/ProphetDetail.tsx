@@ -12,6 +12,7 @@ import { ModelScaffold } from '../types/modelScaffold';
 import { DataSlice } from '../types/dataSlice';
 import { ProphetCharts } from '../components/ProphetCharts';
 import { runLocalInference, Prediction, PerformanceMetrics, PriceData } from '../utils/localInference';
+import { EntityBadge, EntityBadgeList } from '../components/common/EntityBadge';
 import './ProphetDetail.css';
 
 export default function ProphetDetail() {
@@ -92,10 +93,11 @@ export default function ProphetDetail() {
         return;
       }
       
-      if (!modelFit.s3LocalInferenceScriptPath || !modelFit.modelParametersPath) {
+      if (!scaffold.s3LocalInferenceScriptPath || !modelFit.modelParametersPath) {
         console.log('Missing inference script or parameters path:', {
-          s3LocalInferenceScriptPath: modelFit.s3LocalInferenceScriptPath,
-          modelParametersPath: modelFit.modelParametersPath
+          s3LocalInferenceScriptPath: scaffold.s3LocalInferenceScriptPath,
+          modelParametersPath: modelFit.modelParametersPath,
+          scaffoldId: scaffold.scaffoldId
         });
         setInferenceError('Model inference scripts not configured');
         return;
@@ -136,7 +138,7 @@ export default function ProphetDetail() {
 
         console.log('Running local inference...');
         const result = await runLocalInference(
-          modelFit.s3LocalInferenceScriptPath,
+          scaffold.s3LocalInferenceScriptPath!,
           modelFit.modelParametersPath,
           historicalData,
           prophet.targetProperty
@@ -189,8 +191,13 @@ export default function ProphetDetail() {
       <div className="prophet-header">
         <div className="title-section">
           <h1>{prophet.prophetName}</h1>
-          <div className="prophet-meta">
-            <span className="prophet-asset">{prophet.assetId}</span>
+          <div className="prophet-meta" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '12px' }}>
+            <EntityBadge
+              type="asset"
+              id={prophet.assetId}
+              label={prophet.assetId}
+              size="medium"
+            />
             <span className={`status-badge ${prophet.status}`}>
               {prophet.status === 'pending_training' ? 'pending' : prophet.status}
             </span>
@@ -212,7 +219,17 @@ export default function ProphetDetail() {
         </div>
         <div className="metric-card">
           <span className="metric-label">Model Fits</span>
-          <span className="metric-value">{prophet.modelFitIds.length}</span>
+          <div className="metric-value">
+            <EntityBadgeList
+              entities={prophet.modelFitIds.map(fitId => ({
+                type: 'model-fit' as const,
+                id: fitId,
+                label: fitId.split('-').slice(-2).join('-')
+              }))}
+              size="small"
+              maxVisible={2}
+            />
+          </div>
         </div>
         <div className="metric-card">
           <span className="metric-label">Forecast Method</span>
@@ -226,6 +243,12 @@ export default function ProphetDetail() {
           <div className="detail-card glass-surface">
             <div className="card-header">
               <h2>Model Fit</h2>
+              <EntityBadge
+                type="model-fit"
+                id={modelFit.modelFitId}
+                label={modelFit.modelFitId}
+                size="small"
+              />
             </div>
             <div className="card-body">
               <div className="info-grid">
@@ -261,6 +284,12 @@ export default function ProphetDetail() {
           <div className="detail-card glass-surface">
             <div className="card-header">
               <h2>Model Scaffold</h2>
+              <EntityBadge
+                type="scaffold"
+                id={scaffold.scaffoldId}
+                label={scaffold.name}
+                size="small"
+              />
             </div>
             <div className="card-body">
               <div className="info-grid">
@@ -300,6 +329,12 @@ export default function ProphetDetail() {
           <div className="detail-card glass-surface">
             <div className="card-header">
               <h2>Training Data</h2>
+              <EntityBadge
+                type="data-slice"
+                id={slice.dataSliceId}
+                label={`${slice.startDate} to ${slice.endDate}`}
+                size="small"
+              />
             </div>
             <div className="card-body">
               <div className="info-grid">
@@ -346,7 +381,20 @@ export default function ProphetDetail() {
           <div className="inference-results">
             <div className="inference-header glass-surface">
               <h2>📊 Performance Visualization</h2>
-              <p>Historical predictions vs actual prices using local browser-based inference</p>
+              <p style={{ marginBottom: '12px' }}>
+                Historical predictions vs actual prices using local browser-based inference
+              </p>
+              <div style={{ 
+                padding: '10px 16px', 
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                marginBottom: '12px'
+              }}>
+                ✓ <strong>Real-time metrics:</strong> These performance statistics are calculated live in your browser 
+                by running actual predictions on {overallMetrics.sampleSize.toLocaleString()} historical data points.
+              </div>
               {overallMetrics.mape > 50 && (
                 <div className="model-warning">
                   ⚠️ This is a simple baseline model with limited predictive power (MAPE: {overallMetrics.mape.toFixed(1)}%). 

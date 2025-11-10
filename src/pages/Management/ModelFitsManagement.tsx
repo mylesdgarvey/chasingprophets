@@ -4,6 +4,7 @@ import { Plus, Search, Eye, Edit2 } from 'lucide-react';
 import { getAllModelFits } from '../../services/modelFit';
 import { getAllModelScaffolds } from '../../services/modelScaffold';
 import { getAllDataSlices } from '../../services/dataSlice';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import type { ModelFit } from '../../types/modelFit';
 import type { ModelScaffold } from '../../types/modelScaffold';
 import type { DataSlice } from '../../types/dataSlice';
@@ -157,31 +158,28 @@ export default function ModelFitsManagement() {
                 return (
                 <tr key={fit.modelFitId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-mono text-gray-900 dark:text-white">
-                      {fit.modelFitId}
-                    </div>
+                    <EntityBadge
+                      type="model-fit"
+                      id={fit.modelFitId}
+                      label={fit.modelFitId.split('-').slice(-2).join('-')}
+                      size="small"
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      {scaffold ? scaffold.name : fit.scaffoldId}
-                    </div>
-                    <button
-                      onClick={() => navigate(`/mgmt/models/scaffolds/${fit.scaffoldId}/edit`)}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      View Scaffold
-                    </button>
+                    <EntityBadge
+                      type="scaffold"
+                      id={fit.scaffoldId}
+                      label={scaffold ? scaffold.name : fit.scaffoldId}
+                      size="small"
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      {slice ? slice.dataSliceId : fit.dataSliceId}
-                    </div>
-                    <button
-                      onClick={() => navigate(`/mgmt/data/slices/${fit.dataSliceId}`)}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      View Slice
-                    </button>
+                    <EntityBadge
+                      type="data-slice"
+                      id={fit.dataSliceId}
+                      label={slice ? `${slice.startDate} - ${slice.endDate}` : fit.dataSliceId}
+                      size="small"
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(fit.trainingStatus)}`}>

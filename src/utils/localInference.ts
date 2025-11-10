@@ -82,6 +82,7 @@ export async function loadInferenceScript(s3ScriptPath: string, parameters: any)
   
   // Load script content
   const scriptContent = await loadFromS3(s3ScriptPath);
+  console.log('✓ Script loaded, length:', scriptContent.length, 'First line:', scriptContent.split('\n')[0]);
   
   // Execute script in isolated context
   // The script exports a `predict` function
@@ -101,19 +102,35 @@ export async function loadInferenceScript(s3ScriptPath: string, parameters: any)
       throw new Error('Inference script did not export a valid predict function');
     }
     
-    // Return wrapped function for single prediction
-    // The script's predict() expects array of data + parameters object
     // Extract the actual parameters (handle both flat and nested structures)
     const modelParams = parameters.parameters || parameters;
     
+    // Return wrapped function for single prediction
     return (input: any) => {
-      const result = predictFunction([input], modelParams);
-      if (result && result.length > 0) {
-        // Extract predicted value from result
-        const outputField = modelParams.output_field || 'close';
-        return result[0][`${outputField}_pred`];
+      try {
+        // Call predict function with parameters and input
+        const result = predictFunction(modelParams, input);
+        
+        // Handle different return types
+        if (typeof result === 'number') {
+          return result;
+        } else if (Array.isArray(result) && result.length > 0) {
+          // If it returns an array, get first element
+          const val = result[0];
+          if (typeof val === 'number') return val;
+          // If array of objects, extract predicted value
+          const outputField = modelParams.output_field || 'close';
+          return val[`${outputField}_pred`] || val.predicted || val;
+        } else if (typeof result === 'object' && result !== null) {
+          // If it returns an object, extract prediction
+          const outputField = modelParams.output_field || 'close';
+          return result[`${outputField}_pred`] || result.predicted || result.value;
+        }
+        
+        throw new Error(`Unexpected prediction result type: ${typeof result}`);
+      } catch (err) {
+        throw new Error(`Prediction error: ${err instanceof Error ? err.message : err}`);
       }
-      throw new Error('Prediction returned no results');
     };
   } catch (error) {
     console.error('Failed to load inference script:', error);
@@ -134,11 +151,8 @@ export async function loadModelParameters(s3ParametersPath: string): Promise<any
 /**
  * Execute inference on historical data
  * 
- * This function handles the transformation between prices and percentage returns:
- * 1. Converts prices to % returns
- * 2. Provides the appropriate lagged returns based on model requirements
- * 3. Predicts next % return
- * 4. Converts predicted % return back to absolute price
+ * The models are trained on actual price data (OHLCV),
+ * so we pass the price data directly to the inference function.
  */
 export function executeInference(
   historicalData: PriceData[],
@@ -147,82 +161,51 @@ export function executeInference(
 ): Prediction[] {
   const predictions: Prediction[] = [];
   
-  // Calculate all percentage returns first
-  const returns: number[] = [];
-  for (let i = 1; i < historicalData.length; i++) {
-    const prevPrice = historicalData[i - 1][targetField as keyof PriceData] as number;
-    const currentPrice = historicalData[i][targetField as keyof PriceData] as number;
-    const percentReturn = ((currentPrice / prevPrice) - 1) * 100;
-    returns.push(percentReturn);
-  }
-  
-  // We need at least 3 returns to make predictions with MLR (2 lags + 1 to predict)
-  // For SLR we only need 2 returns (1 lag + 1 to predict)
-  const minReturns = 3; // Support both SLR and MLR
-  
-  if (returns.length < minReturns) {
-    console.warn(`Not enough data: need at least ${minReturns} returns, got ${returns.length}`);
+  // We need at least 2 data points to make a prediction
+  // (use current data to predict next value)
+  if (historicalData.length < 2) {
+    console.warn(`Not enough data: need at least 2 points, got ${historicalData.length}`);
     return predictions;
   }
   
-  // Start from index 3 in historicalData (corresponds to returns[2])
-  // This gives us returns[0] and returns[1] as lags
-  for (let i = minReturns; i < historicalData.length; i++) {
+  // For each data point (except the last), predict the next value
+  for (let i = 0; i < historicalData.length - 1; i++) {
     const current = historicalData[i];
-    const previous = historicalData[i - 1];
-    const returnIndex = i - 1; // Index in returns array
+    const next = historicalData[i + 1];
     
     try {
-      // Prepare input with lagged returns
-      // Try to provide both t-1 and t-2 lags for compatibility with both SLR and MLR
-      const input: any = {
-        date: current.date
+      // Pass the current data point to the inference function
+      // Models expect: { date, open, high, low, close, volume }
+      const input = {
+        date: current.date,
+        open: current.open,
+        high: current.high,
+        low: current.low,
+        close: current.close,
+        volume: current.volume
       };
       
-      // Add lagged returns (t-1, t-2)
-      if (returnIndex >= 1) {
-        input['return_t-1'] = returns[returnIndex - 1];
-      }
-      if (returnIndex >= 2) {
-        input['return_t-2'] = returns[returnIndex - 2];
-      }
+      // Model predicts the next close price
+      const predictedPrice = inferenceFunction(input);
       
-      // For SLR compatibility, also provide the simple 'close' field
-      input[targetField] = returns[returnIndex - 1];
-      
-      // Model predicts the NEXT percentage return
-      const predictedReturn = inferenceFunction(input);
-      
-      // Debug: Log first few predictions
-      if (i === minReturns) {
-        console.log('First prediction:', {
-          date: current.date,
-          return_t_minus_2: input['return_t-2'],
-          return_t_minus_1: input['return_t-1'],
-          predictedReturn,
-          currentActual: current[targetField as keyof PriceData] as number
-        });
+      if (predictedPrice === null || isNaN(predictedPrice)) {
+        console.warn(`Invalid prediction at index ${i}:`, predictedPrice);
+        continue;
       }
       
-      // Convert predicted % return back to absolute price
-      // predicted_price = previous_price * (1 + predicted_return / 100)
-      const previousPrice = previous[targetField as keyof PriceData] as number;
-      const predictedPrice = previousPrice * (1 + predictedReturn / 100);
-      
-      const actual = current[targetField as keyof PriceData] as number;
-      const error = actual - predictedPrice;
-      const percentError = Math.abs(error / actual) * 100;
+      // The actual next price
+      const actualPrice = next[targetField as keyof PriceData] as number;
       
       predictions.push({
-        date: current.date,
-        actual,
+        date: next.date,
+        actual: actualPrice,
         predicted: predictedPrice,
-        error,
-        percentError
+        error: Math.abs(actualPrice - predictedPrice),
+        percentError: Math.abs((actualPrice - predictedPrice) / actualPrice) * 100
       });
     } catch (error) {
-      console.error(`Inference failed for date ${current.date}:`, error);
-      // Skip this prediction but continue
+      console.error(`Prediction error at index ${i}:`, error);
+      // Continue with next prediction
     }
   }
   

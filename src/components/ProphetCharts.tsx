@@ -34,70 +34,131 @@ export function ProphetCharts({ predictions, overallMetrics, rollingMetrics }: P
 
   return (
     <div className="prophet-charts">
-      {/* Chart 1: Predicted vs Actual */}
-      <div className="chart-card">
-        <h4>Predicted vs Actual Prices</h4>
-        <Plot
-          data={[
-            {
-              x: dates,
-              y: actualValues,
-              type: 'scatter',
-              mode: 'lines',
-              name: 'Actual',
-              line: { color: '#3b82f6', width: 2 }
-            } as any,
-            {
-              x: dates,
-              y: predictedValues,
-              type: 'scatter',
-              mode: 'lines',
-              name: 'Predicted',
-              line: { color: '#f59e0b', width: 2, dash: 'dash' }
-            } as any
-          ]}
-          layout={{
-            autosize: true,
-            margin: { l: 60, r: 40, t: 40, b: 60 },
-            paper_bgcolor: 'transparent',
-            plot_bgcolor: 'transparent',
-            font: { color: 'var(--text-primary)', family: 'Inter, sans-serif' },
-            xaxis: {
-              title: { text: 'Date' },
-              gridcolor: 'var(--border-color)',
-              showgrid: true
-            },
-            yaxis: {
-              title: { text: 'Price' },
-              gridcolor: 'var(--border-color)',
-              showgrid: true
-            },
-            hovermode: 'x unified',
-            legend: {
-              x: 0,
-              y: 1,
-              bgcolor: 'rgba(0,0,0,0.1)'
-            }
-          } as any}
-          config={{ responsive: true, displayModeBar: false }}
-          style={{ width: '100%', height: '400px' }}
-        />
-        <div className="chart-metrics">
-          <div className="metric">
-            <span className="label">MAPE</span>
-            <span className="value">{overallMetrics.mape.toFixed(2)}%</span>
+      {/* Row 1: Predicted vs Actual + Error Percentage */}
+      <div className="chart-row">
+        <div className="chart-card chart-card--half">
+          <h4>Predicted vs Actual Prices</h4>
+          <Plot
+            data={[
+              {
+                x: dates,
+                y: actualValues,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Actual',
+                line: { color: '#3b82f6', width: 2 }
+              } as any,
+              {
+                x: dates,
+                y: predictedValues,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Predicted',
+                line: { color: '#f59e0b', width: 2, dash: 'dash' }
+              } as any
+            ]}
+            layout={{
+              autosize: true,
+              margin: { l: 60, r: 40, t: 40, b: 60 },
+              paper_bgcolor: 'transparent',
+              plot_bgcolor: 'transparent',
+              font: { color: 'var(--text-primary)', family: 'Inter, sans-serif' },
+              xaxis: {
+                title: { text: 'Date' },
+                gridcolor: 'var(--border-color)',
+                showgrid: true
+              },
+              yaxis: {
+                title: { text: 'Price' },
+                gridcolor: 'var(--border-color)',
+                showgrid: true
+              },
+              hovermode: 'x unified',
+              legend: {
+                x: 0,
+                y: 1,
+                bgcolor: 'rgba(0,0,0,0.1)'
+              }
+            } as any}
+            config={{ responsive: true, displayModeBar: false }}
+            style={{ width: '100%', height: '400px' }}
+          />
+          <div className="chart-metrics">
+            <div className="metric">
+              <span className="label">MAPE</span>
+              <span className="value">{overallMetrics.mape.toFixed(2)}%</span>
+            </div>
+            <div className="metric">
+              <span className="label">RMSE</span>
+              <span className="value">{overallMetrics.rmse.toFixed(2)}</span>
+            </div>
+            <div className="metric">
+              <span className="label">MAE</span>
+              <span className="value">{overallMetrics.mae.toFixed(2)}</span>
+            </div>
+            <div className="metric">
+              <span className="label">Direction Accuracy</span>
+              <span className="value">{overallMetrics.directionalAccuracy.toFixed(1)}%</span>
+            </div>
           </div>
-          <div className="metric">
-            <span className="label">RMSE</span>
-            <span className="value">{overallMetrics.rmse.toFixed(2)}</span>
-          </div>
-          <div className="metric">
-            <span className="label">MAE</span>
-            <span className="value">{overallMetrics.mae.toFixed(2)}</span>
-          </div>
-          <div className="metric">
-            <span className="label">Direction Accuracy</span>
-            <span className="value">{overallMetrics.directionalAccuracy.toFixed(1)}%</span>
+        </div>
+
+        <div className="chart-card chart-card--half">
+          <h4>Prediction Error Percentage Over Time</h4>
+          <Plot
+            data={[
+              {
+                x: dates,
+                y: percentErrors,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Error %',
+                line: { color: '#ef4444', width: 2 },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(239, 68, 68, 0.1)'
+              } as any,
+              {
+                x: dates,
+                y: new Array(dates.length).fill(0),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Zero Line',
+                line: { color: '#6b7280', width: 1, dash: 'dot' },
+                showlegend: false
+              } as any
+            ]}
+            layout={{
+              autosize: true,
+              margin: { l: 60, r: 40, t: 40, b: 60 },
+              paper_bgcolor: 'transparent',
+              plot_bgcolor: 'transparent',
+              font: { color: 'var(--text-primary)', family: 'Inter, sans-serif' },
+              xaxis: {
+                title: { text: 'Date' },
+                gridcolor: 'var(--border-color)',
+                showgrid: true
+              },
+              yaxis: {
+                title: { text: 'Error (%)' },
+                gridcolor: 'var(--border-color)',
+                showgrid: true,
+                zeroline: true,
+                zerolinecolor: '#6b7280'
+              },
+              hovermode: 'x unified',
+              legend: {
+                x: 0,
+                y: 1,
+                bgcolor: 'rgba(0,0,0,0.1)'
+              }
+            } as any}
+            config={{ responsive: true, displayModeBar: false }}
+            style={{ width: '100%', height: '400px' }}
+          />
+          <div className="chart-info">
+            <p><strong>Error % = ((Actual - Predicted) / Actual) × 100</strong></p>
+            <p>Positive values indicate the model under-predicted (actual was higher).</p>
+            <p>Negative values indicate the model over-predicted (actual was lower).</p>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Edit2, Trash2, Plus } from 'lucide-react';
 import { getAllProphets, deleteProphet } from '../../services/prophet';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import type { Prophet } from '../../types/prophet';
 import './Management.css';
 
@@ -135,7 +136,13 @@ export default function ProphetsManagement() {
               filteredProphets.map((prophet) => (
                 <tr key={prophet.prophetId}>
                   <td>
-                    <div style={{ fontWeight: '600' }}>{prophet.prophetName}</div>
+                    <EntityBadge
+                      type="prophet"
+                      id={prophet.prophetId}
+                      label={prophet.prophetName}
+                      size="medium"
+                      clickable={false}
+                    />
                     {prophet.description && (
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
                         {prophet.description.substring(0, 50)}{prophet.description.length > 50 ? '...' : ''}
@@ -143,7 +150,12 @@ export default function ProphetsManagement() {
                     )}
                   </td>
                   <td>
-                    <span className="monospace">{prophet.assetId}</span>
+                    <EntityBadge
+                      type="asset"
+                      id={prophet.assetId}
+                      label={prophet.assetId}
+                      size="small"
+                    />
                   </td>
                   <td>
                     <span className={`status-badge ${prophet.status}`}>

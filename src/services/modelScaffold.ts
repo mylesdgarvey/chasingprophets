@@ -43,11 +43,44 @@ export async function getModelScaffold(scaffoldId: string): Promise<ModelScaffol
 
   try {
     const response = await ddb.send(command);
-    return (response.Item as ModelScaffold) || null;
+    if (!response.Item) return null;
+    
+    // Convert contract format from DynamoDB storage to TypeScript interface
+    const item = response.Item as any;
+    return normalizeScaffold(item);
   } catch (error) {
     console.error('Error fetching model scaffold:', error);
     throw error;
   }
+}
+
+/**
+ * Normalize scaffold data from DynamoDB format to TypeScript interface
+ */
+function normalizeScaffold(item: any): ModelScaffold {
+  // Convert contracts from {fields: [...], types: {...}} to ContractField[]
+  const normalizeContract = (contract: any): any[] => {
+    if (Array.isArray(contract)) {
+      return contract; // Already in correct format
+    }
+    if (contract && contract.fields && contract.types) {
+      // Convert from DynamoDB format
+      return contract.fields.map((field: string) => ({
+        name: field,
+        type: contract.types[field] || 'numerical',
+        required: true,
+        description: ''
+      }));
+    }
+    return [];
+  };
+
+  return {
+    ...item,
+    inputContract: normalizeContract(item.inputContract),
+    outputContract: normalizeContract(item.outputContract),
+    formulaLatex: item.formula || item.formulaLatex // Support both field names
+  } as ModelScaffold;
 }
 
 /**
@@ -62,7 +95,7 @@ export async function getAllModelScaffolds(): Promise<ModelScaffold[]> {
 
   try {
     const response = await ddb.send(command);
-    return (response.Items || []) as ModelScaffold[];
+    return (response.Items || []).map(item => normalizeScaffold(item));
   } catch (error) {
     console.error('Error fetching all model scaffolds:', error);
     throw error;

@@ -7,11 +7,27 @@
   padding: 0;
 }
 
+.chart-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chart-card {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem;
+}
+
+.chart-card--half {
+  /* Inherits from chart-card, just for semantic clarity */
 }
 
 .chart-card h4 {

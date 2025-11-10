@@ -15,9 +15,10 @@ import { Prophet } from '../../types/prophet';
 import { ProphetPerformanceSummary } from '../../types/performance';
 import { getAllProphets } from '../../services/prophet';
 import { getAllPerformanceSummaries } from '../../services/performance';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import './ProphetLeaderboard.css';
 
-type SortField = 'name' | 'asset' | 'mape' | 'accuracy' | 'directional' | 'status';
+type SortField = 'name' | 'asset' | 'mape' | 'r2' | 'directional' | 'status';
 type SortOrder = 'asc' | 'desc';
 
 interface ProphetWithMetrics extends Prophet {
@@ -112,10 +113,9 @@ export function ProphetLeaderboard() {
           aVal = a.performanceSummary?.mape ?? Infinity;
           bVal = b.performanceSummary?.mape ?? Infinity;
           break;
-        case 'accuracy':
-          // Calculate accuracy from MAPE: accuracy = 100 - MAPE
-          aVal = a.performanceSummary?.mape ? (100 - a.performanceSummary.mape) : -Infinity;
-          bVal = b.performanceSummary?.mape ? (100 - b.performanceSummary.mape) : -Infinity;
+        case 'r2':
+          aVal = a.performanceSummary?.r2 ?? -Infinity;
+          bVal = b.performanceSummary?.r2 ?? -Infinity;
           break;
         case 'directional':
           aVal = a.performanceSummary?.directionalAccuracy ?? -Infinity;
@@ -201,28 +201,45 @@ export function ProphetLeaderboard() {
         </div>
       </div>
 
+      {/* Metrics Explanation */}
+      <div className="info-banner glass-surface" style={{ 
+        padding: '12px 20px', 
+        marginBottom: '20px', 
+        background: 'rgba(59, 130, 246, 0.1)',
+        border: '1px solid rgba(59, 130, 246, 0.3)',
+        borderRadius: '8px'
+      }}>
+        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5' }}>
+          ℹ️ <strong>Note:</strong> Metrics shown here are estimated performance summaries for quick comparison. 
+          Click any prophet to view <strong>real-time inference metrics</strong> calculated from actual predictions on historical data.
+        </p>
+      </div>
+
       {/* Filters */}
       <div className="filter-section glass-surface">
-        <button 
-          className={`filter-toggle ${showFilters ? 'active' : ''}`}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter size={18} />
-          <span>Filters</span>
-        </button>
+        <div className="filter-panel" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="filter-group" style={{ minWidth: '180px' }}>
+            <label><strong>Time Window</strong></label>
+            <select value={aggregationWindow} onChange={(e) => setAggregationWindow(e.target.value)}>
+              <option value="20-day">Most Recent 20 Days</option>
+              <option value="60-day">Most Recent 60 Days</option>
+              <option value="120-day">Most Recent 120 Days</option>
+              <option value="240-day">Most Recent 240 Days</option>
+            </select>
+          </div>
+
+          <button 
+            className={`filter-toggle ${showFilters ? 'active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ marginBottom: '4px' }}
+          >
+            <Filter size={18} />
+            <span>More Filters</span>
+          </button>
+        </div>
 
         {showFilters && (
-          <div className="filter-panel">
-            <div className="filter-group">
-              <label>Time Window</label>
-              <select value={aggregationWindow} onChange={(e) => setAggregationWindow(e.target.value)}>
-                <option value="20-day">20 Days</option>
-                <option value="60-day">60 Days</option>
-                <option value="120-day">120 Days</option>
-                <option value="240-day">240 Days</option>
-              </select>
-            </div>
-
+          <div className="filter-panel" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <div className="filter-group">
               <label>Asset</label>
               <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)}>
@@ -248,10 +265,9 @@ export function ProphetLeaderboard() {
               onClick={() => {
                 setAssetFilter('all');
                 setStatusFilter('active');
-                setAggregationWindow('20-day');
               }}
             >
-              Clear Filters
+              Clear Additional Filters
             </button>
           </div>
         )}
@@ -296,13 +312,23 @@ export function ProphetLeaderboard() {
                 </th>
                 <th className="sortable" onClick={() => handleSort('mape')}>
                   <div className="th-content">
-                    MAPE
+                    MAPE %
                     <ArrowUpDown size={14} />
                   </div>
                 </th>
-                <th>Accuracy</th>
-                <th>Directional</th>
-                <th>Performance</th>
+                <th className="sortable" onClick={() => handleSort('r2')}>
+                  <div className="th-content">
+                    R²
+                    <ArrowUpDown size={14} />
+                  </div>
+                </th>
+                <th className="sortable" onClick={() => handleSort('directional')}>
+                  <div className="th-content">
+                    Direction %
+                    <ArrowUpDown size={14} />
+                  </div>
+                </th>
+                <th>RMSE</th>
                 <th className="sortable" onClick={() => handleSort('status')}>
                   <div className="th-content">
                     Status
@@ -316,9 +342,9 @@ export function ProphetLeaderboard() {
                 const rank = index + 1;
                 const badge = getRankBadge(rank);
                 const mape = prophet.performanceSummary?.mape;
-                const accuracy = mape ? (100 - mape) : undefined;
+                const r2 = prophet.performanceSummary?.r2;
+                const rmse = prophet.performanceSummary?.rmse;
                 const directional = prophet.performanceSummary?.directionalAccuracy;
-                const rating = getPerformanceRating(mape);
                 const BadgeIcon = badge.icon;
 
                 return (
@@ -334,16 +360,27 @@ export function ProphetLeaderboard() {
                       </div>
                     </td>
                     <td className="name-cell">
-                      <div className="prophet-name">
-                        {prophet.prophetName}
-                      </div>
+                      <EntityBadge
+                        type="prophet"
+                        id={prophet.prophetId}
+                        label={prophet.prophetName}
+                        size="medium"
+                        clickable={false}
+                      />
                     </td>
-                    <td className="asset-cell">{prophet.assetId}</td>
+                    <td className="asset-cell">
+                      <EntityBadge
+                        type="asset"
+                        id={prophet.assetId}
+                        label={prophet.assetId}
+                        size="small"
+                      />
+                    </td>
                     <td className="metric-cell">
                       {mape !== undefined ? `${mape.toFixed(2)}%` : 'N/A'}
                     </td>
                     <td className="metric-cell">
-                      {accuracy !== undefined ? `${accuracy.toFixed(1)}%` : 'N/A'}
+                      {r2 !== undefined ? r2.toFixed(4) : 'N/A'}
                     </td>
                     <td className="metric-cell">
                       {directional !== undefined ? (
@@ -357,10 +394,8 @@ export function ProphetLeaderboard() {
                         </div>
                       ) : 'N/A'}
                     </td>
-                    <td>
-                      <span className={`performance-badge ${rating.className}`}>
-                        {rating.label}
-                      </span>
+                    <td className="metric-cell">
+                      {rmse !== undefined ? rmse.toFixed(2) : 'N/A'}
                     </td>
                     <td>
                       <span className={`status-badge ${prophet.status}`}>

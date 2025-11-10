@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
 import { getAllDataSlices } from '../../services/dataSlice';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import DataSliceFormModal from '../../components/modals/DataSliceFormModal';
 import type { DataSlice } from '../../types/dataSlice';
 import './Management.css';
@@ -157,26 +158,20 @@ export default function DataSlicesManagement() {
               filteredSlices.map((slice) => (
                 <tr key={slice.dataSliceId}>
                   <td>
-                    <span className="monospace">{slice.dataSliceId}</span>
+                    <EntityBadge
+                      type="data-slice"
+                      id={slice.dataSliceId}
+                      label={slice.dataSliceId.split('-').slice(-2).join('-')}
+                      size="small"
+                    />
                   </td>
                   <td>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const datasetOrAsset = slice.datasetId || slice.assetId;
-                        if (datasetOrAsset) setDatasetFilter(datasetOrAsset);
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--primary-color)',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        padding: 0
-                      }}
-                    >
-                      {slice.datasetId || slice.assetId || 'N/A'}
-                    </button>
+                    <EntityBadge
+                      type="dataset"
+                      id={slice.datasetId || slice.assetId || 'unknown'}
+                      label={slice.datasetId || slice.assetId || 'N/A'}
+                      size="small"
+                    />
                   </td>
                   <td>
                     <span className="badge" style={{

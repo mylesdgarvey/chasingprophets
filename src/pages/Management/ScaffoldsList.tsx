@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter } from 'lucide-react';
 import { ModelScaffold } from '../../types/modelScaffold';
 import { getAllModelScaffolds } from '../../services/modelScaffold';
+import { EntityBadge } from '../../components/common/EntityBadge';
 import './ScaffoldsList.css';
 
 export function ScaffoldsList() {
@@ -235,10 +236,14 @@ export function ScaffoldsList() {
             <div 
               key={scaffold.scaffoldId} 
               className="scaffold-card glass-surface"
-              onClick={() => navigate(`/mgmt/models/scaffolds/${scaffold.scaffoldId}/edit`)}
             >
               <div className="card-header">
-                <h3>{scaffold.name}</h3>
+                <EntityBadge
+                  type="scaffold"
+                  id={scaffold.scaffoldId}
+                  label={scaffold.name}
+                  size="medium"
+                />
                 <div className="badges">
                   {scaffold.scaffoldType && (
                     <span className={`badge type-${scaffold.scaffoldType.toLowerCase()}`}>

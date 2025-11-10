@@ -10,7 +10,8 @@
  *   ./scripts/load-env.sh tsx scripts/admin/train-models.ts [--limit N] [--dry-run]
  */
 
-import { DynamoDBClient, ScanCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import 'dotenv/config';
+import { DynamoDBClient, ScanCommand, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { spawn } from 'child_process';
@@ -85,20 +86,28 @@ async function getS3Object(s3Path: string): Promise<string> {
 }
 
 async function getAssetPrices(assetId: string): Promise<any[]> {
+  // Read asset prices from S3 CSV file
+  console.log(`   Loading ${assetId} prices from S3...`);
+  
   const s3Path = `data/assets/${assetId}/ohlcv_full.csv`;
   const csvText = await getS3Object(`s3://${BUCKET}/${s3Path}`);
   
   const lines = csvText.trim().split('\n');
-  const headers = lines[0].split(',');
+  const headers = lines[0].split(',').map(h => h.trim());
   
   return lines.slice(1).map(line => {
     const values = line.split(',');
     const row: any = {};
     headers.forEach((h, i) => {
-      row[h.trim()] = values[i]?.trim();
+      const val = values[i]?.trim();
+      if (h === 'date') {
+        row[h] = val;
+      } else {
+        row[h] = parseFloat(val);
+      }
     });
     return row;
-  });
+  }).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 async function getScaffold(scaffoldId: string): Promise<any> {
@@ -120,7 +129,7 @@ async function getScaffold(scaffoldId: string): Promise<any> {
   return unmarshall(result.Items[0]);
 }
 
-async function getSliceData(sliceId: string, assetId: string): Promise<any[]> {
+async function getSliceData(sliceId: string): Promise<any[]> {
   console.log(`   Loading slice ${sliceId}...`);
   // Get slice metadata from DynamoDB
   const scanCmd = new ScanCommand({
@@ -139,9 +148,9 @@ async function getSliceData(sliceId: string, assetId: string): Promise<any[]> {
   
   const slice = unmarshall(result.Items[0]) as DataSlice;
   
-  // Load full asset data
-  console.log(`   Loading asset prices from S3...`);
-  const allPrices = await getAssetPrices(assetId);
+  // Load full asset data using assetId from slice
+  console.log(`   Loading asset prices from DynamoDB for ${slice.assetId}...`);
+  const allPrices = await getAssetPrices(slice.assetId);
   console.log(`   Asset prices loaded: ${allPrices.length} records`);
   
   // Filter by slice date range
@@ -204,7 +213,8 @@ async function runPythonTraining(
   return new Promise((resolve, reject) => {
     const pythonProcess = spawn('python3', [scriptFile], {
       cwd: tempDir,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env }  // Inherit environment variables including PATH
     });
     
     let stdout = '';
@@ -297,9 +307,9 @@ async function getUnfitModelFits(): Promise<ModelFit[]> {
   console.log('   Querying DynamoDB table:', TABLES.ModelFits);
   const cmd = new ScanCommand({
     TableName: TABLES.ModelFits,
-    FilterExpression: 'trainingStatus = :unfit',
+    FilterExpression: 'trainingStatus = :pending',
     ExpressionAttributeValues: {
-      ':unfit': { S: 'unfit' }
+      ':pending': { S: 'pending_training' }
     }
   });
   
@@ -352,7 +362,7 @@ async function trainModelFit(fit: ModelFit): Promise<void> {
     if (!sliceId) {
       throw new Error('Missing dataSliceId/sliceId in ModelFit');
     }
-    const trainingData = await getSliceData(sliceId, fit.assetId);
+    const trainingData = await getSliceData(sliceId);
     console.log(`   ✓ Loaded ${trainingData.length} records`);
     
     // 2. Run Python training script

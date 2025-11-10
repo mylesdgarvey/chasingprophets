@@ -5,6 +5,7 @@ import Plotly from 'plotly.js-dist-min';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { getAsset, getAssetPrices } from '../services/assets';
 import { PriceData } from '../types/price';
+import { EntityBadge } from '../components/common/EntityBadge';
 import MiniIndicator from '../components/mini/MiniIndicator';
 import SMACombined from '../components/mini/SMACombined';
 import PriceVolumeExplorer from '../components/charts/PriceVolumeExplorer';
@@ -633,9 +634,15 @@ export default function AssetPage() {
           <div className="hero-content">
             <span className="asset-eyebrow">Asset Overview</span>
             <h1 className="asset-title">{asset?.name || asset?.ticker || ticker}</h1>
-            {asset?.ticker && asset?.ticker !== asset?.name ? (
-              <span className="asset-ticker">{asset?.ticker}</span>
-            ) : null}
+            {asset?.ticker && (
+              <EntityBadge
+                type="asset"
+                id={asset.ticker}
+                label={asset.ticker}
+                size="medium"
+                clickable={false}
+              />
+            )}
           </div>
           <div className="hero-controls">
             {/* Time range selector */}

@@ -1,0 +1,22 @@
+🚀 COMPLETE SETUP FROM SCRATCH
+================================
+This will set up the entire ChasingProphets infrastructure:
+  1. AWS IAM roles
+  2. S3 buckets
+  3. DynamoDB tables
+  4. Cognito user pool
+  5. Download stock data
+  6. Create data slices
+  7. Train all models
+  8. Calculate performance metrics
+
+
+📋 Step 1/8: Setting up IAM roles...
+TypeError: Unknown file extension ".ts" for /workspaces/chasingprophets/scripts/setup-iam-roles.ts
+    at Object.getFileProtocolModuleFormat [as file:] (node:internal/modules/esm/get_format:219:9)
+    at defaultGetFormat (node:internal/modules/esm/get_format:245:36)
+    at defaultLoad (node:internal/modules/esm/load:120:22)
+    at async ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:580:32)
+    at async ModuleJob._link (node:internal/modules/esm/module_job:154:19) {
+  code: 'ERR_UNKNOWN_FILE_EXTENSION'
+}
