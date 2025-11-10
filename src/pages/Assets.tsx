@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, BookOpen, Compass, RefreshCw } from "react-feather";
 import { getAllAssets } from "../services/assets";
+import { EntityBadge } from "../components/common/EntityBadge";
 import "./Assets.css";
 
 type ViewState = "root" | "letter" | "results";
@@ -320,8 +321,14 @@ export default function Assets() {
                   <button key={asset.ticker} className="asset-card refined" onClick={() => handleAssetClick(asset.ticker)}>
                     <div className="asset-card-header">
                       <div>
-                        <div className="asset-symbol">{asset.ticker}</div>
-                        <div className="asset-name">{asset.name || asset.ticker}</div>
+                        <EntityBadge
+                          type="asset"
+                          id={asset.ticker}
+                          label={asset.ticker}
+                          size="medium"
+                          clickable={false}
+                        />
+                        <div className="asset-name" style={{ marginTop: '0.5rem' }}>{asset.name || asset.ticker}</div>
                       </div>
                       <div className="asset-market">{asset.market || "Unknown market"}</div>
                     </div>

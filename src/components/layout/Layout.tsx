@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { BarChart2, Database, Settings, LogOut, Bell, Moon, Sun } from 'react-feather';
+import { BarChart2, Database, Settings, LogOut, Bell, Moon, Sun, TrendingUp, Sliders } from 'react-feather';
 import NotificationPopup from '../notifications/NotificationPopup';
 import SearchBox from '../controls/SearchBox';
 import { getUnreadCountForUser } from '../../services/notifications';
@@ -77,13 +77,33 @@ const Layout: React.FC = () => {
               <span className="nav-text">Dashboard</span>
             </Link>
             <Link 
-              to="/assets" 
-              className={`nav-item ${location.pathname === '/assets' ? 'active' : ''}`}
-              data-tooltip="Assets"
+              to="/prophets" 
+              className={`nav-item ${location.pathname === '/prophets' ? 'active' : ''}`}
+              data-tooltip="Prophets"
             >
-              <div className="nav-icon"><Database size={24} /></div>
-              <span className="nav-text">Assets</span>
+              <div className="nav-icon"><TrendingUp size={24} /></div>
+              <span className="nav-text">Prophets</span>
             </Link>
+            {user?.role === 'admin' && (
+              <Link 
+                to="/admin" 
+                className={`nav-item ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+                data-tooltip="System Admin"
+              >
+                <div className="nav-icon"><Sliders size={24} /></div>
+                <span className="nav-text">Admin</span>
+              </Link>
+            )}
+            {user?.role === 'admin' && (
+              <Link 
+                to="/assets" 
+                className={`nav-item ${location.pathname === '/assets' ? 'active' : ''}`}
+                data-tooltip="Assets"
+              >
+                <div className="nav-icon"><Database size={24} /></div>
+                <span className="nav-text">Assets</span>
+              </Link>
+            )}
             <Link 
               to="/settings" 
               className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`}

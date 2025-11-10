@@ -1,0 +1,16 @@
+{
+  "data": [
+    {"open": 100, "high": 105, "low": 98, "volume": 1000000, "close": 103},
+    {"open": 103, "high": 108, "low": 102, "volume": 1200000, "close": 106},
+    {"open": 106, "high": 110, "low": 104, "volume": 1100000, "close": 108},
+    {"open": 108, "high": 112, "low": 107, "volume": 1300000, "close": 111},
+    {"open": 111, "high": 115, "low": 109, "volume": 1150000, "close": 113},
+    {"open": 113, "high": 117, "low": 111, "volume": 1250000, "close": 115},
+    {"open": 115, "high": 119, "low": 113, "volume": 1400000, "close": 117},
+    {"open": 117, "high": 121, "low": 115, "volume": 1350000, "close": 119}
+  ],
+  "config": {
+    "input_fields": ["open", "high", "low", "volume"],
+    "output_field": "close"
+  }
+}

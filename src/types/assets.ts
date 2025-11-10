@@ -35,5 +35,13 @@ export type AssetSearchResult = {
 export const TABLES = {
   ASSETS: 'ChasingProphets-Assets',
   ASSET_PRICES: 'ChasingProphets-AssetPrices',
+  DATASETS: 'ChasingProphets-Datasets',
+  DATA_SLICES: 'ChasingProphets-DataSlices',
+  MODEL_SCAFFOLDS: 'ChasingProphets-ModelScaffolds',
+  MODEL_FITS: 'ChasingProphets-ModelFits',
+  PROPHETS: 'ChasingProphets-Prophets',
+  FORECASTS: 'ChasingProphets-Forecasts',
+  PERFORMANCE: 'ChasingProphets-Performance',
+  PROPHET_PERFORMANCE_SUMMARY: 'ChasingProphets-ProphetPerformanceSummary',
   NOTIFICATIONS: 'ChasingProphets-Notifications'
 } as const;

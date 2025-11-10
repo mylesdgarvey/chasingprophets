@@ -1,0 +1,114 @@
+/**
+ * EntityBadge Styles
+ * Bubble/pill style badges for database entities
+ */
+
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  background: rgba(var(--badge-color-rgb, 59, 130, 246), 0.1);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.entity-badge--clickable {
+  cursor: pointer;
+}
+
+.entity-badge--clickable:hover {
+  background: rgba(var(--badge-color-rgb, 59, 130, 246), 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.entity-badge--clickable:active {
+  transform: translateY(0);
+}
+
+/* Size variants */
+.entity-badge--small {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 16px;
+  gap: 4px;
+}
+
+.entity-badge--medium {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 20px;
+  gap: 6px;
+}
+
+.entity-badge--large {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 24px;
+  gap: 8px;
+}
+
+/* Type-specific colors (using CSS variables) */
+.entity-badge--prophet {
+  --badge-color-rgb: 59, 130, 246;
+}
+
+.entity-badge--model-fit {
+  --badge-color-rgb: 139, 92, 246;
+}
+
+.entity-badge--data-slice {
+  --badge-color-rgb: 16, 185, 129;
+}
+
+.entity-badge--dataset {
+  --badge-color-rgb: 20, 184, 166;
+}
+
+.entity-badge--scaffold {
+  --badge-color-rgb: 245, 158, 11;
+}
+
+.entity-badge--asset {
+  --badge-color-rgb: 6, 182, 212;
+}
+
+.entity-badge--forecast {
+  --badge-color-rgb: 236, 72, 153;
+}
+
+.entity-badge--more {
+  background: rgba(100, 100, 100, 0.2);
+  border-color: rgba(150, 150, 150, 0.3);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.entity-badge__label {
+  line-height: 1;
+}
+
+/* Badge List */
+.entity-badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .entity-badge {
+    background: rgba(var(--badge-color-rgb), 0.15);
+  }
+  
+  .entity-badge--clickable:hover {
+    background: rgba(var(--badge-color-rgb), 0.25);
+  }
+}

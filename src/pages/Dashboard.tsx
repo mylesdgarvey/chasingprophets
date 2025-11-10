@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   TrendingUp,
   Activity,
@@ -12,7 +12,7 @@ import {
 import StockChart from "../components/chart/StockChart";
 import type { Data } from "plotly.js";
 import type { PriceData } from "../types/price";
-import { DJIA_DATA, SPX_DATA } from "../data/testData";
+import { getAssetPrices } from "../services/assets";
 import "./Dashboard.css";
 
 type TimeWindowKey = "1W" | "1M" | "3M" | "All";
@@ -59,21 +59,6 @@ const PROPHECY_LIBRARY: Record<ProphetKey, { title: string; blurb: string; color
 };
 
 const MAX_ACTIVE_PROPHETS = 3;
-
-const ASSETS = [
-  {
-    id: "DJIA" as const,
-    name: "Dow Jones Industrial Average",
-    description: "Legacy bellwether for U.S. industrial momentum.",
-    data: DJIA_DATA
-  },
-  {
-    id: "SPX" as const,
-    name: "S&P 500",
-    description: "Wide-market risk proxy with heavy tech skew.",
-    data: SPX_DATA
-  }
-];
 
 function sliceDataWindow(dataset: PriceData[], window: TimeWindowKey): PriceData[] {
   const config = TIME_WINDOWS.find(entry => entry.id === window);
@@ -176,7 +161,45 @@ function formatCompact(value: number) {
 }
 
 export default function Dashboard() {
-  const [activeAssetId, setActiveAssetId] = useState<typeof ASSETS[number]["id"]>("DJIA");
+  const [djiaData, setDjiaData] = useState<PriceData[]>([]);
+  const [spxData, setSpxData] = useState<PriceData[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch real data on mount
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [djia, spx] = await Promise.all([
+          getAssetPrices('^DJI'),
+          getAssetPrices('^GSPC')
+        ]);
+        setDjiaData(djia);
+        setSpxData(spx);
+      } catch (error) {
+        console.error('Failed to load asset data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const ASSETS = useMemo(() => [
+    {
+      id: "DJIA" as const,
+      name: "Dow Jones Industrial Average",
+      description: "Legacy bellwether for U.S. industrial momentum.",
+      data: djiaData
+    },
+    {
+      id: "SPX" as const,
+      name: "S&P 500",
+      description: "Wide-market risk proxy with heavy tech skew.",
+      data: spxData
+    }
+  ], [djiaData, spxData]);
+
+  const [activeAssetId, setActiveAssetId] = useState<"DJIA" | "SPX">("DJIA");
   const [timeWindow, setTimeWindow] = useState<TimeWindowKey>("1M");
   const [scaleType, setScaleType] = useState<ScaleKey>("linear");
   const [selectedProphets, setSelectedProphets] = useState<ProphetKey[]>([
