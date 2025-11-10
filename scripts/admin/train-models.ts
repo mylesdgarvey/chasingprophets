@@ -45,6 +45,9 @@ const s3 = new S3Client({
   }
 });
 
+// Cache for training scripts to avoid redundant S3 downloads
+const scriptCache = new Map<string, string>();
+
 interface ModelFit {
   modelFitId: string;
   scaffoldId: string;
@@ -167,9 +170,17 @@ async function runPythonTraining(
   trainingData: any[],
   modelFitId: string
 ): Promise<any> {
-  // Download training script from S3
-  console.log('      → Downloading training script from S3...');
-  const scriptContent = await getS3Object(scriptPath);
+  // Check cache first to avoid redundant S3 downloads
+  let scriptContent = scriptCache.get(scriptPath);
+  
+  if (!scriptContent) {
+    console.log('      → Downloading training script from S3...');
+    scriptContent = await getS3Object(scriptPath);
+    scriptCache.set(scriptPath, scriptContent);
+    console.log('      → Script cached for reuse');
+  } else {
+    console.log('      → Using cached training script');
+  }
   
   // Create temp directory for this training job
   const tempDir = join(tmpdir(), `train-${modelFitId}`);

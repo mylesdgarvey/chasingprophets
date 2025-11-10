@@ -108,8 +108,9 @@ export async function loadInferenceScript(s3ScriptPath: string, parameters: any)
     // Return wrapped function for single prediction
     return (input: any) => {
       try {
-        // Call predict function with parameters and input
-        const result = predictFunction(modelParams, input);
+        // Call predict function with correct signature: predict(data, parameters)
+        // The inference scripts expect data as an array, so wrap single input in array
+        const result = predictFunction([input], modelParams);
         
         // Handle different return types
         if (typeof result === 'number') {
